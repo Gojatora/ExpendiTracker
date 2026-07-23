@@ -1,0 +1,171 @@
+region_name,category_name,avg_monthly_spend,year
+Bangsamoro Autonomous Region in Muslim Mindanao,Food,8094.82,2023
+Bangsamoro Autonomous Region in Muslim Mindanao,Clothing,415.11,2023
+Bangsamoro Autonomous Region in Muslim Mindanao,Housing & Utilities,2059.5,2023
+Bangsamoro Autonomous Region in Muslim Mindanao,Health,195.48,2023
+Bangsamoro Autonomous Region in Muslim Mindanao,Transportation,705.9,2023
+Bangsamoro Autonomous Region in Muslim Mindanao,Communication,237.5,2023
+Bangsamoro Autonomous Region in Muslim Mindanao,Recreation,92.56,2023
+Bangsamoro Autonomous Region in Muslim Mindanao,Education,290.17,2023
+Bangsamoro Autonomous Region in Muslim Mindanao,Insurance,105.06,2023
+Bangsamoro Autonomous Region in Muslim Mindanao,Miscellaneous,655.86,2023
+Cordillera Administrative Region,Food,8105.74,2023
+Cordillera Administrative Region,Clothing,451.96,2023
+Cordillera Administrative Region,Housing & Utilities,4997.38,2023
+Cordillera Administrative Region,Health,611.18,2023
+Cordillera Administrative Region,Transportation,1353.68,2023
+Cordillera Administrative Region,Communication,742.5,2023
+Cordillera Administrative Region,Recreation,170.77,2023
+Cordillera Administrative Region,Education,1101.43,2023
+Cordillera Administrative Region,Insurance,517.08,2023
+Cordillera Administrative Region,Miscellaneous,636.34,2023
+National Capital Region,Food,12107.32,2023
+National Capital Region,Clothing,518.57,2023
+National Capital Region,Housing & Utilities,9247.65,2023
+National Capital Region,Health,909.24,2023
+National Capital Region,Transportation,2015.97,2023
+National Capital Region,Communication,1231.27,2023
+National Capital Region,Recreation,264.19,2023
+National Capital Region,Education,773.54,2023
+National Capital Region,Insurance,1006.39,2023
+National Capital Region,Miscellaneous,1069.73,2023
+Region I - Ilocos Region,Food,8354.16,2023
+Region I - Ilocos Region,Clothing,338.87,2023
+Region I - Ilocos Region,Housing & Utilities,4086.66,2023
+Region I - Ilocos Region,Health,604.7,2023
+Region I - Ilocos Region,Transportation,1310.71,2023
+Region I - Ilocos Region,Communication,683.09,2023
+Region I - Ilocos Region,Recreation,146.7,2023
+Region I - Ilocos Region,Education,689.26,2023
+Region I - Ilocos Region,Insurance,446.21,2023
+Region I - Ilocos Region,Miscellaneous,776.31,2023
+Region II - Cagayan Valley,Food,7513.06,2023
+Region II - Cagayan Valley,Clothing,346.06,2023
+Region II - Cagayan Valley,Housing & Utilities,3826.3,2023
+Region II - Cagayan Valley,Health,513.92,2023
+Region II - Cagayan Valley,Transportation,1186.95,2023
+Region II - Cagayan Valley,Communication,621.36,2023
+Region II - Cagayan Valley,Recreation,135.07,2023
+Region II - Cagayan Valley,Education,737.98,2023
+Region II - Cagayan Valley,Insurance,370.84,2023
+Region II - Cagayan Valley,Miscellaneous,643.46,2023
+Region III - Central Luzon,Food,10044.01,2023
+Region III - Central Luzon,Clothing,530.3,2023
+Region III - Central Luzon,Housing & Utilities,5461.59,2023
+Region III - Central Luzon,Health,733.78,2023
+Region III - Central Luzon,Transportation,1653.73,2023
+Region III - Central Luzon,Communication,899.03,2023
+Region III - Central Luzon,Recreation,255.85,2023
+Region III - Central Luzon,Education,743.01,2023
+Region III - Central Luzon,Insurance,535.02,2023
+Region III - Central Luzon,Miscellaneous,966.36,2023
+Region IV-A - CALABARZON,Food,10080.44,2023
+Region IV-A - CALABARZON,Clothing,479.54,2023
+Region IV-A - CALABARZON,Housing & Utilities,6116.8,2023
+Region IV-A - CALABARZON,Health,907.07,2023
+Region IV-A - CALABARZON,Transportation,1936.71,2023
+Region IV-A - CALABARZON,Communication,964.63,2023
+Region IV-A - CALABARZON,Recreation,224.11,2023
+Region IV-A - CALABARZON,Education,778.88,2023
+Region IV-A - CALABARZON,Insurance,859.29,2023
+Region IV-A - CALABARZON,Miscellaneous,961.9,2023
+Region IV-B - MIMAROPA,Food,6656.75,2023
+Region IV-B - MIMAROPA,Clothing,349.09,2023
+Region IV-B - MIMAROPA,Housing & Utilities,3147.32,2023
+Region IV-B - MIMAROPA,Health,503.96,2023
+Region IV-B - MIMAROPA,Transportation,1046.05,2023
+Region IV-B - MIMAROPA,Communication,466.09,2023
+Region IV-B - MIMAROPA,Recreation,155.58,2023
+Region IV-B - MIMAROPA,Education,464.01,2023
+Region IV-B - MIMAROPA,Insurance,495.17,2023
+Region IV-B - MIMAROPA,Miscellaneous,630.16,2023
+Region IX - Zamboanga Peninsula,Food,7643.32,2023
+Region IX - Zamboanga Peninsula,Clothing,367.85,2023
+Region IX - Zamboanga Peninsula,Housing & Utilities,2843.82,2023
+Region IX - Zamboanga Peninsula,Health,428.24,2023
+Region IX - Zamboanga Peninsula,Transportation,1029.45,2023
+Region IX - Zamboanga Peninsula,Communication,438.94,2023
+Region IX - Zamboanga Peninsula,Recreation,152.69,2023
+Region IX - Zamboanga Peninsula,Education,515.29,2023
+Region IX - Zamboanga Peninsula,Insurance,423.06,2023
+Region IX - Zamboanga Peninsula,Miscellaneous,686.72,2023
+Region V - Bicol Region,Food,7260.34,2023
+Region V - Bicol Region,Clothing,315.38,2023
+Region V - Bicol Region,Housing & Utilities,3556.15,2023
+Region V - Bicol Region,Health,458.68,2023
+Region V - Bicol Region,Transportation,1061.51,2023
+Region V - Bicol Region,Communication,485.3,2023
+Region V - Bicol Region,Recreation,141.87,2023
+Region V - Bicol Region,Education,860.27,2023
+Region V - Bicol Region,Insurance,441.16,2023
+Region V - Bicol Region,Miscellaneous,636.2,2023
+Region VI - Western Visayas,Food,8010.9,2023
+Region VI - Western Visayas,Clothing,406.09,2023
+Region VI - Western Visayas,Housing & Utilities,3623.69,2023
+Region VI - Western Visayas,Health,584.59,2023
+Region VI - Western Visayas,Transportation,1265.37,2023
+Region VI - Western Visayas,Communication,550.87,2023
+Region VI - Western Visayas,Recreation,148.45,2023
+Region VI - Western Visayas,Education,783.87,2023
+Region VI - Western Visayas,Insurance,489.09,2023
+Region VI - Western Visayas,Miscellaneous,717.47,2023
+Region VII - Central Visayas,Food,7313.66,2023
+Region VII - Central Visayas,Clothing,303.71,2023
+Region VII - Central Visayas,Housing & Utilities,4163.12,2023
+Region VII - Central Visayas,Health,456.91,2023
+Region VII - Central Visayas,Transportation,1298.4,2023
+Region VII - Central Visayas,Communication,579.2,2023
+Region VII - Central Visayas,Recreation,118.41,2023
+Region VII - Central Visayas,Education,738.32,2023
+Region VII - Central Visayas,Insurance,422.64,2023
+Region VII - Central Visayas,Miscellaneous,616.26,2023
+Region VIII - Eastern Visayas,Food,7405.45,2023
+Region VIII - Eastern Visayas,Clothing,297.73,2023
+Region VIII - Eastern Visayas,Housing & Utilities,3362.53,2023
+Region VIII - Eastern Visayas,Health,440.14,2023
+Region VIII - Eastern Visayas,Transportation,983.08,2023
+Region VIII - Eastern Visayas,Communication,440.71,2023
+Region VIII - Eastern Visayas,Recreation,132.1,2023
+Region VIII - Eastern Visayas,Education,606.72,2023
+Region VIII - Eastern Visayas,Insurance,453.1,2023
+Region VIII - Eastern Visayas,Miscellaneous,663.1,2023
+Region X - Northern Mindanao,Food,6952.14,2023
+Region X - Northern Mindanao,Clothing,320.68,2023
+Region X - Northern Mindanao,Housing & Utilities,3546.84,2023
+Region X - Northern Mindanao,Health,477.71,2023
+Region X - Northern Mindanao,Transportation,1226.06,2023
+Region X - Northern Mindanao,Communication,518.37,2023
+Region X - Northern Mindanao,Recreation,130.75,2023
+Region X - Northern Mindanao,Education,664.86,2023
+Region X - Northern Mindanao,Insurance,439.28,2023
+Region X - Northern Mindanao,Miscellaneous,593.29,2023
+Region XI - Davao Region,Food,6764.31,2023
+Region XI - Davao Region,Clothing,351.75,2023
+Region XI - Davao Region,Housing & Utilities,3909.73,2023
+Region XI - Davao Region,Health,426.8,2023
+Region XI - Davao Region,Transportation,1250.31,2023
+Region XI - Davao Region,Communication,499.23,2023
+Region XI - Davao Region,Recreation,135.22,2023
+Region XI - Davao Region,Education,592.71,2023
+Region XI - Davao Region,Insurance,498.82,2023
+Region XI - Davao Region,Miscellaneous,639.76,2023
+Region XII - SOCCSKSARGEN,Food,7275.34,2023
+Region XII - SOCCSKSARGEN,Clothing,425.43,2023
+Region XII - SOCCSKSARGEN,Housing & Utilities,3005.04,2023
+Region XII - SOCCSKSARGEN,Health,566.83,2023
+Region XII - SOCCSKSARGEN,Transportation,1252.8,2023
+Region XII - SOCCSKSARGEN,Communication,471.79,2023
+Region XII - SOCCSKSARGEN,Recreation,151.45,2023
+Region XII - SOCCSKSARGEN,Education,548.08,2023
+Region XII - SOCCSKSARGEN,Insurance,423.65,2023
+Region XII - SOCCSKSARGEN,Miscellaneous,652.66,2023
+Region XIII - Caraga,Food,8034.13,2023
+Region XIII - Caraga,Clothing,337.68,2023
+Region XIII - Caraga,Housing & Utilities,3240.45,2023
+Region XIII - Caraga,Health,474.0,2023
+Region XIII - Caraga,Transportation,1133.34,2023
+Region XIII - Caraga,Communication,468.73,2023
+Region XIII - Caraga,Recreation,138.31,2023
+Region XIII - Caraga,Education,757.72,2023
+Region XIII - Caraga,Insurance,459.44,2023
+Region XIII - Caraga,Miscellaneous,628.31,2023
