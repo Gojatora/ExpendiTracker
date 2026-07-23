@@ -86,6 +86,16 @@ client-side for display. This keeps each backend method focused on a single
 comparison type (matching the two acceptance-criteria-defined use cases), 
 at the cost of two round-trips instead of one on dashboard load.
 
+**Region naming convention: full names over abbreviations**
+
+- Chose to store full region names (`"National Capital Region"`,
+  `"Cordillera Administrative Region"`, `"Bangsamoro Autonomous Region in
+  Muslim Mindanao"`) rather than common abbreviations (NCR, CAR, BARMM) in
+  the `Region` lookup table and `REGION_CODE_MAP`.
+- Decided before database initialization, avoiding a naming mismatch between
+  `aggregate_fies.py`'s output and the seeded `Region` table that would have
+  caused silent join failures in `load_benchmarks.py`.
+
 # Risks & Assumptions
 
 ## Assumptions
@@ -107,6 +117,28 @@ at the cost of two round-trips instead of one on dashboard load.
 | Scope creep from Nice-to-Have features delays Must-Have delivery before the project deadline | Medium | High | Strictly timebox Must-Have features first; treat Should/Nice-to-Have as stretch goals only if ahead of schedule |
 | Single developer (or small team) bandwidth limits given the fixed graduation deadline | High | High | Sequence work by priority tier (Must → Should → Nice); build in buffer weeks; cut Nice-to-Have features first if behind schedule |
 
+**[RESOLVED] Regional benchmark data: unverified region code mapping**
+
+- **Original risk**: `REGION_CODE_MAP` in `aggregate_fies.py` mapped FIES 2023's
+  numeric `W_REGN` codes (1–14, 16, 17, 19) to Philippine region names based on
+  standard PSGC numbering convention. PSA's own PSADA catalog metadata page for
+  `w_regn` did not publish text labels for these codes, so the mapping was an
+  informed guess, not independently confirmed from an authoritative source.
+- **Why it mattered**: An incorrect mapping would silently mislabel every
+  household's regional benchmark data — the aggregation script would run
+  without error, but every downstream comparison in the app would be wrong.
+- **Resolution**: Verified against `fies_2023_vol1_metadata_dictionary_.xlsx`
+  (PSA's FIES 2023 data dictionary, sheet `fies_2023_v1_valueset`, field
+  `W_REGN_VS1`), which contains the actual value-label lookup PSA omitted from
+  the web-facing metadata page. All 17 mapped codes matched the original
+  PSGC-convention guess exactly, including the non-obvious gap at codes 15
+  and 18 (code 15 is ARMM's retired code, superseded by BARMM at 19; code 18
+  is Negros Island Region, tracked via a separate `W_REGN_NIR` variable rather
+  than the main `W_REGN`).
+- **Takeaway**: The initial guess was correct, but treating it as unverified
+  until checked against a primary source was the right call — this class of
+  error (silent mislabeling with no runtime error) is exactly the kind that's
+  expensive to catch after the fact.
 ---
 
 ## Database Normalization Review
@@ -205,3 +237,11 @@ By project completion, the application is expected to deliver:
 - Evidence of sound software engineering practice: version-controlled history, tested core logic (especially the comparison feature), and a documented requirements-to-implementation trail (user stories → acceptance criteria → sprint delivery).
 - A **learning outcome** for the developer: hands-on experience across the full stack — backend API design, database modeling, mobile development, and deployment — directly applicable to entry-level software developer or data-adjacent engineering roles after graduation.
 
+## Regional Benchmark Data Source
+This project uses PSA's FIES 2023 Volume 1 microdata (not included in this
+repo due to file size — ~160k rows, >100MB). To reproduce the aggregation:
+1. Download `FIES_PUF_2023_Volume1.CSV` from the PSADA catalog:
+   https://psada.psa.gov.ph/catalog/318
+2. Place it at `data/raw/FIES_PUF_2023_Volume1.CSV`
+3. Run `python -m data.aggregate_fies` to regenerate the benchmark CSV
+4. Run `python -m data.load_benchmark` to load it into your local DB
