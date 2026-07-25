@@ -1,5 +1,7 @@
 # Environments
 .env
-
+.gitignore
 
 data/raw/
+
+mobile/.gitignore
