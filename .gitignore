@@ -4,4 +4,12 @@
 
 data/raw/
 
+Scaffold-React-Native/Expo-project
 mobile/.gitignore
+
+data/raw/
+
+
+__pycache__/
+*.pyc
+main
