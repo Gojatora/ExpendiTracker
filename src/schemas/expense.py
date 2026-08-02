@@ -2,11 +2,20 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ExpenseCreate(BaseModel):
     """What the client sends to log an expense."""
+    category_id: int
+    expense_name: str = Field(min_length=1, max_length=255)
+    amount: Decimal = Field(gt=0, decimal_places=2)
+    expense_date: date
+    note: Optional[str] = Field(default=None, max_length=500)
+
+
+class ExpenseUpdate(BaseModel):
+    """What the client sends to fully replace an existing expense (PUT semantics)."""
     category_id: int
     expense_name: str = Field(min_length=1, max_length=255)
     amount: Decimal = Field(gt=0, decimal_places=2)
@@ -25,5 +34,4 @@ class ExpenseOut(BaseModel):
     note: Optional[str] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
