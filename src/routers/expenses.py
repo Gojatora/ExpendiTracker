@@ -11,6 +11,9 @@ from src.services.expense_service import (
     ExpenseNotFoundError,
     NotExpenseOwnerError,
 )
+from datetime import date
+from typing import Optional
+
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
@@ -81,3 +84,19 @@ def delete_expense(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to delete this expense.",
         )
+
+@router.get("", response_model=list[ExpenseOut])
+def get_expenses(
+    category_id: Optional[int] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = ExpenseService(db)
+    return service.get_expenses(
+        user_id=current_user.user_id,
+        category_id=category_id,
+        start_date=start_date,
+        end_date=end_date,
+    )

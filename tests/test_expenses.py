@@ -148,3 +148,139 @@ def test_delete_expense_wrong_owner(client, auth_headers, second_user_auth_heade
 def test_delete_expense_not_found(client, auth_headers):
     response = client.delete("/expenses/9999", headers=auth_headers)
     assert response.status_code == 404
+
+def test_get_expenses_empty(client, auth_headers):
+    response = client.get("/expenses", headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_get_expenses_returns_own_only(client, auth_headers, second_user_auth_headers, test_category):
+    client.post(
+        "/expenses",
+        json={
+            "category_id": test_category.category_id,
+            "expense_name": "My expense",
+            "amount": "100.00",
+            "expense_date": "2026-08-01",
+        },
+        headers=auth_headers,
+    )
+    client.post(
+        "/expenses",
+        json={
+            "category_id": test_category.category_id,
+            "expense_name": "Their expense",
+            "amount": "200.00",
+            "expense_date": "2026-08-01",
+        },
+        headers=second_user_auth_headers,
+    )
+
+    response = client.get("/expenses", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["expense_name"] == "My expense"
+
+
+def test_get_expenses_ordered_newest_first(client, auth_headers, test_category):
+    client.post(
+        "/expenses",
+        json={
+            "category_id": test_category.category_id,
+            "expense_name": "Older",
+            "amount": "100.00",
+            "expense_date": "2026-07-01",
+        },
+        headers=auth_headers,
+    )
+    client.post(
+        "/expenses",
+        json={
+            "category_id": test_category.category_id,
+            "expense_name": "Newer",
+            "amount": "200.00",
+            "expense_date": "2026-08-01",
+        },
+        headers=auth_headers,
+    )
+
+    response = client.get("/expenses", headers=auth_headers)
+    data = response.json()
+    assert data[0]["expense_name"] == "Newer"
+    assert data[1]["expense_name"] == "Older"
+
+
+def test_get_expenses_filter_by_category(client, auth_headers, db_session):
+    from src.models.models import Category
+
+    food = Category(category_name="Food2")
+    transport = Category(category_name="Transport2")
+    db_session.add_all([food, transport])
+    db_session.commit()
+    db_session.refresh(food)
+    db_session.refresh(transport)
+
+    client.post(
+        "/expenses",
+        json={
+            "category_id": food.category_id,
+            "expense_name": "Groceries",
+            "amount": "100.00",
+            "expense_date": "2026-08-01",
+        },
+        headers=auth_headers,
+    )
+    client.post(
+        "/expenses",
+        json={
+            "category_id": transport.category_id,
+            "expense_name": "Bus fare",
+            "amount": "50.00",
+            "expense_date": "2026-08-01",
+        },
+        headers=auth_headers,
+    )
+
+    response = client.get(
+        f"/expenses?category_id={transport.category_id}", headers=auth_headers
+    )
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["expense_name"] == "Bus fare"
+
+
+def test_get_expenses_filter_by_date_range(client, auth_headers, test_category):
+    client.post(
+        "/expenses",
+        json={
+            "category_id": test_category.category_id,
+            "expense_name": "July expense",
+            "amount": "100.00",
+            "expense_date": "2026-07-15",
+        },
+        headers=auth_headers,
+    )
+    client.post(
+        "/expenses",
+        json={
+            "category_id": test_category.category_id,
+            "expense_name": "August expense",
+            "amount": "200.00",
+            "expense_date": "2026-08-01",
+        },
+        headers=auth_headers,
+    )
+
+    response = client.get(
+        "/expenses?start_date=2026-08-01", headers=auth_headers
+    )
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["expense_name"] == "August expense"
+
+
+def test_get_expenses_no_auth(client):
+    response = client.get("/expenses")
+    assert response.status_code == 401
