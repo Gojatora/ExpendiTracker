@@ -96,6 +96,45 @@ at the cost of two round-trips instead of one on dashboard load.
   `aggregate_fies.py`'s output and the seeded `Region` table that would have
   caused silent join failures in `load_benchmarks.py`.
 
+## Design Decisions
+
+**Password hashing: pwdlib over passlib**
+
+- Nearly every FastAPI tutorial defaults to `passlib`, but it's effectively
+  unmaintained (last release several years ago) and has known compatibility
+  issues with newer versions of `bcrypt`, where it fails to read bcrypt's
+  version string and logs an error on every hash operation.
+- Chose `pwdlib` instead — built by the creator of FastAPI Users specifically
+  as a modern replacement, and the library FastAPI's own official tutorial
+  has since adopted. Used `PasswordHash.recommended()`, which defaults to
+  Argon2 (OWASP's current top recommendation for password hashing), with
+  bcrypt available as a documented fallback.
+
+**JWT library: PyJWT over python-jose**
+
+- `python-jose` is the other common tutorial default, but like `passlib`,
+  its maintenance has slowed and community discussion increasingly flags it
+  as the outdated choice.
+- Chose `PyJWT` instead — actively maintained, minimal API scope (JWT
+  encode/decode only, no unrelated bundled crypto features), and the
+  direction FastAPI's own documentation has been moving toward.
+
+**Session strategy: JWT access tokens over server-side sessions**
+
+- Server-side sessions (cookie-based) are a natural fit for browser clients,
+  where cookie handling is automatic - but React Native has no equivalent
+  automatic cookie jar, making sessions an awkward fit for a mobile client.
+- Chose JWT access tokens instead: issued on login, stored client-side, sent
+  via the `Authorization` header on each request. Requires no server-side
+  session storage, and is the standard, well-documented pattern for a
+  mobile app + API backend architecture like this project's.
+- Configuration: HS256 signing algorithm (single backend issuing and
+  verifying its own tokens - no need for RS256's asymmetric key split,
+  which solves a multi-service trust problem this project doesn't have),
+  7-day token expiry, no refresh-token mechanism yet. Refresh tokens are a
+  reasonable future improvement but out of scope for the current project
+  timeline - noted here rather than built now. 
+
 # Risks & Assumptions
 
 ## Assumptions
