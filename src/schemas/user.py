@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserCreate(BaseModel):
@@ -19,8 +19,8 @@ class UserOut(BaseModel):
     region_id: Optional[int] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True  # lets this be built directly from a SQLAlchemy User object
+    model_config = ConfigDict(from_attributes=True)
+
 
 class UserLogin(BaseModel):
     """What the client sends to log in."""
