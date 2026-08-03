@@ -6,7 +6,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>ExpendiTracker</Text>
-        <Text style={styles.subtitle}>Project shell — screens coming in Sprint 4</Text>
+        <Text style={styles.subtitle}>Home screen</Text>
       </View>
     </SafeAreaView>
   );
@@ -25,6 +25,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '600',
+    color: '#666',
   },
   subtitle: {
     fontSize: 14,
