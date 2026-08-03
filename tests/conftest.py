@@ -9,7 +9,7 @@ load_dotenv()
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
-from src.models.models import Base, Category
+from src.models.models import Base, Category, Region, RegionalBenchmark
 from src.db.session import get_db
 from src.main import app
 
@@ -91,3 +91,29 @@ def test_category(db_session):
     db_session.commit()
     db_session.refresh(category)
     return category
+
+@pytest.fixture
+def test_region(db_session):
+    region = Region(region_name="Test Region")
+    db_session.add(region)
+    db_session.commit()
+    db_session.refresh(region)
+    return region
+
+
+@pytest.fixture
+def test_benchmark(db_session, test_category, test_region):
+    """A single benchmark row: Test Region + the shared test_category,
+    year 2023, so ComparisonService's 'find latest year' logic has
+    something concrete to find.
+    """
+    benchmark = RegionalBenchmark(
+        region_id=test_region.region_id,
+        category_id=test_category.category_id,
+        avg_monthly_spend=1000.00,
+        year=2023,
+    )
+    db_session.add(benchmark)
+    db_session.commit()
+    db_session.refresh(benchmark)
+    return benchmark
