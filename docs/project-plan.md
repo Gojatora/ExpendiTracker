@@ -96,8 +96,6 @@ at the cost of two round-trips instead of one on dashboard load.
   `aggregate_fies.py`'s output and the seeded `Region` table that would have
   caused silent join failures in `load_benchmarks.py`.
 
-## Design Decisions
-
 **Password hashing: pwdlib over passlib**
 
 - Nearly every FastAPI tutorial defaults to `passlib`, but it's effectively
@@ -134,6 +132,71 @@ at the cost of two round-trips instead of one on dashboard load.
   7-day token expiry, no refresh-token mechanism yet. Refresh tokens are a
   reasonable future improvement but out of scope for the current project
   timeline - noted here rather than built now. 
+
+**Comparison endpoint: user_id and region handled differently, deliberately**
+
+- Same reasoning as the expense history endpoint: `user_id` is never accepted
+  from client input (query param or otherwise) - it's always derived from
+  the verified JWT via `current_user.user_id`. Accepting a client-supplied
+  `user_id` would let any authenticated user request another user's private
+  spending data just by changing a number in the URL.
+- `region`, by contrast, IS accepted as an explicit, optional query
+  parameter - and this is not the same problem in disguise. Regional
+  benchmark data is public reference data, not private to any user, so
+  letting someone compare their spending against a different region's
+  benchmark (e.g. "what would this look like if I lived in NCR?") doesn't
+  expose anyone's personal information. Region resolution follows a
+  three-tier fallback: explicit `region` param -> the user's own saved
+  `region_id` -> `None`, which the service then treats as a signal to
+  compute a national average across all regions instead of a single
+  region's data.
+
+**Benchmark year: most recent available, not current calendar year**
+
+- `RegionalBenchmark` rows are all tagged with the FIES survey year they
+  came from (currently 2023, from the only dataset loaded so far). Naively
+  filtering benchmarks by the current calendar year would return zero rows
+  for every category, since PSA doesn't publish FIES annually - it's
+  released roughly every three years, not on a fixed yearly cycle.
+- `ComparisonService` instead runs `MAX(year)` against `regional_benchmarks`
+  to find whatever year's data is actually loaded, and compares against
+  that. This also means the code requires no changes when a newer FIES
+  release (e.g. FIES 2026, once published) is eventually loaded - it will
+  automatically start being used as the latest available year.
+- A live PSA API integration to auto-refresh this data was considered and
+  explicitly deferred - PSA does not appear to expose a public API for FIES
+  releases; new survey years require a manual CSV download and re-run of
+  `aggregate_fies.py` / `load_benchmark.py`, which is an acceptable manual
+  process given PSA's multi-year release cadence.
+
+**Missing benchmark/spending data: shown explicitly, not hidden or errored**
+
+- A user may spend money on a category with no matching benchmark row (e.g.
+  a category added after the benchmark data was loaded), or have a
+  benchmark for a category they haven't spent anything on this month. Both
+  cases are valid, expected states, not error conditions.
+- The comparison response includes every category from the union of "user
+  has spending" and "benchmark exists," with `user_spent`, `benchmark_avg`,
+  and `status` all nullable. `status` (`"above"` / `"below"` / `"equal"`)
+  is only computed when both values are present - there is no meaningful
+  above/below comparison when one side of the comparison doesn't exist.
+- Rejected alternative: silently dropping categories missing one side of
+  the comparison. This would hide genuinely useful information from the
+  user (e.g. "you spent money here but we have no regional reference for
+  it yet") without any error to signal why a category is missing.
+
+**National-average calculation: rounded to match currency precision**
+
+- The national-average branch computes `AVG(avg_monthly_spend)` across all
+  regions per category using Postgres's `AVG()` aggregate. Postgres returns
+  this at full computed precision (e.g. `385.6352941176470588`), not
+  rounded to 2 decimal places like the underlying `Numeric(10,2)` columns.
+- Caught via a failing unit test asserting an exact string match on a
+  national-average value - the mismatch (`1000.0000000000000000` vs the
+  expected `1000.00`) surfaced this rather than it being noticed by eye.
+  Fixed by rounding with Python's `Decimal`-aware `round()` (not `float`
+  rounding, which would reintroduce the imprecision `Numeric` columns are
+  meant to avoid) before returning the value from the service layer.
 
 # Risks & Assumptions
 
