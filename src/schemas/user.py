@@ -32,3 +32,6 @@ class TokenResponse(BaseModel):
     """What the API sends back after successful login."""
     access_token: str
     token_type: str = "bearer"
+
+class UpdateRegionRequest(BaseModel):
+    region_id: Optional[int] = None
