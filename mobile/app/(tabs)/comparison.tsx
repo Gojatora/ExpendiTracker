@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { StyleSheet, Text, View, ActivityIndicator, ScrollView, RefreshControl, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CartesianChart, BarGroup } from 'victory-native';
@@ -40,10 +41,12 @@ export default function ComparisonScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchData().finally(() => setLoading(false));
-  }, [fetchData]);
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchData().finally(() => setLoading(false));
+    }, [fetchData])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

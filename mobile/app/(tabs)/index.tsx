@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { StyleSheet, Text, View, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
@@ -35,10 +36,12 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchData().finally(() => setLoading(false));
-  }, [fetchData]);
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchData().finally(() => setLoading(false));
+    }, [fetchData])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

@@ -16,3 +16,13 @@ export async function login(email, password) {
 export async function logout() {
   await clearToken();
 }
+
+export async function updateRegion(regionId) {
+  const response = await apiClient.put('/auth/me/region', { region_id: regionId });
+  return response.data;
+}
+
+export async function getMe() {
+  const response = await apiClient.get('/auth/me');
+  return response.data;
+}
