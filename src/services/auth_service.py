@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from pwdlib import PasswordHash
 
-from src.models.models import User
+from src.models.models import User, Region
 from src.schemas.user import UserCreate
 from src.services.token_service import create_access_token
 
@@ -18,6 +18,10 @@ class InvalidCredentialsError(Exception):
     Deliberately generic - never reveals which one was wrong, so an
     attacker can't use this endpoint to enumerate which emails are registered.
     """
+    pass
+
+class RegionNotFoundError(Exception):
+    """Raised when the given region_id doesn't exist."""
     pass
 
 
@@ -50,3 +54,16 @@ class AuthService:
             raise InvalidCredentialsError("Invalid email or password.")
 
         return create_access_token(user.user_id)
+
+    def update_user_region(self, user_id: int, region_id: int | None) -> User:
+        if region_id is not None:
+            region = self.db.query(Region).filter(Region.region_id == region_id).first()
+            if region is None:
+                raise RegionNotFoundError(f"Region not found: {region_id}")
+
+        user = self.db.query(User).filter(User.user_id == user_id).first()
+        user.region_id = region_id
+        self.db.commit()
+        self.db.refresh(user)
+
+        return user
