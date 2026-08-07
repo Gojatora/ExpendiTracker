@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import * as Notifications from 'expo-notifications'
+import { useState, useCallback, useEffect } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { StyleSheet, Text, View, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +9,15 @@ import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import { getMe, updateRegion } from '@/api/auth';
 import { getRegions } from '@/api/regions';
+
+import { Switch, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import {
+  requestNotificationPermission,
+  scheduleReminder,
+  cancelReminder,
+  getReminderSettings,
+} from '@/lib/reminders';
 
 type Region = {
   region_id: number;
@@ -20,8 +30,11 @@ export default function SettingsScreen() {
   const [selectedRegionId, setSelectedRegionId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState(new Date());
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const loadRegionData = useCallback(async () => {
     try {
       const [regionsData, meData] = await Promise.all([getRegions(), getMe()]);
       setRegions(regionsData);
@@ -34,9 +47,20 @@ export default function SettingsScreen() {
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      loadData().finally(() => setLoading(false));
-    }, [loadData])
+      loadRegionData().finally(() => setLoading(false));
+    }, [loadRegionData])
   );
+
+  useEffect(() => {
+    async function loadReminderSettings() {
+      const reminderSettings = await getReminderSettings();
+      setReminderEnabled(reminderSettings.enabled);
+      const time = new Date();
+      time.setHours(reminderSettings.hour, reminderSettings.minute, 0, 0);
+      setReminderTime(time);
+    }
+    loadReminderSettings();
+  }, []);
 
   const handleSaveRegion = async () => {
     setSaving(true);
@@ -51,6 +75,35 @@ export default function SettingsScreen() {
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleReminder = async (value: boolean) => {
+  if (value) {
+    const granted = await requestNotificationPermission();
+    if (!granted) {
+      Alert.alert(
+        'Permission needed',
+        'Notification permission is required for reminders. Please enable it in your device settings.'
+      );
+      return;
+    }
+
+    await scheduleReminder(reminderTime.getHours(), reminderTime.getMinutes());
+    setReminderEnabled(true);
+  } else {
+    await cancelReminder();
+    setReminderEnabled(false);
+  }
+};
+
+  const handleTimeChange = async (_event: any, selectedTime?: Date) => {
+    setShowTimePicker(false);
+    if (selectedTime) {
+      setReminderTime(selectedTime);
+      if (reminderEnabled) {
+        await scheduleReminder(selectedTime.getHours(), selectedTime.getMinutes());
+      }
     }
   };
 
@@ -101,7 +154,33 @@ export default function SettingsScreen() {
       >
         <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Region'}</Text>
       </Pressable>
+      
+      <Text style={styles.label}>Daily Reminder</Text>
+      <Text style={styles.hint}>
+        Get a daily nudge to log your expenses.
+      </Text>
+      <View style={styles.reminderRow}>
+        <Text style={styles.reminderRowText}>Enable reminder</Text>
+        <Switch value={reminderEnabled} onValueChange={handleToggleReminder} />
+      </View>
 
+      {reminderEnabled && (
+        <Pressable style={styles.input} onPress={() => setShowTimePicker(true)}>
+          <Text>
+            {reminderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </Pressable>
+      )}
+
+      {showTimePicker && (
+        <DateTimePicker
+          value={reminderTime}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleTimeChange}
+        />
+      )}
+      
       <Pressable style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Log Out</Text>
       </Pressable>
@@ -133,4 +212,19 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   logoutButtonText: { color: '#fff', fontWeight: '600' },
+
+  input: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  reminderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  reminderRowText: { fontSize: 14 },
 });
