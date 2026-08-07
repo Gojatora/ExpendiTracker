@@ -198,6 +198,41 @@ at the cost of two round-trips instead of one on dashboard load.
   rounding, which would reintroduce the imprecision `Numeric` columns are
   meant to avoid) before returning the value from the service layer.
 
+**Daily reminder: scope reduced from conditional to simple recurring**
+
+- Original ticket criteria included "skipped if user already logged an
+  expense that day." This would have required re-evaluating whether an
+  expense was logged and rescheduling/cancelling the day's notification
+  at each app-foreground or expense-creation event, since locally
+  scheduled notifications have no way to run a live conditional check
+  at the exact moment they fire (no server, no background function
+  invoked at delivery time without significantly more infrastructure).
+- Deliberately simplified to a plain recurring daily reminder ("Have you
+  logged your expenses yet?") with no expense-check logic. This was a
+  scope decision, not a technical workaround - the conditional version
+  was implementable but added meaningful complexity for a habit-reminder
+  feature where a occasional redundant reminder has low real cost.
+- Uses expo-notifications' local (on-device) scheduling exclusively -
+  remote/push notifications were not considered, since they require a
+  development build (unsupported in Expo Go as of SDK 53+ on Android)
+  and would add a push-credential/server dependency for a feature that's
+  fundamentally about on-device timing, with no external trigger needed.
+
+**Known limitation: Android notification delivery timing is OS-controlled**
+
+- During testing, scheduled reminder notifications fired with inconsistent
+  timing (a few minutes early/late, and occasionally not at all within a
+  reasonable window) despite confirmed-correct scheduling parameters sent
+  to the OS (verified via `getAllScheduledNotificationsAsync()` showing
+  the correct hour/minute on every test).
+- This is a documented, widely-known Android OS behavior, particularly
+  aggressive on MIUI (Xiaomi) devices, which throttle/batch background
+  notification delivery for battery optimization unless an app is
+  manually exempted. This is outside what application code controls -
+  not a bug in this project's implementation.
+- No code-level fix exists for this within Expo Go. Documented here as a
+  known constraint rather than something to keep debugging indefinitely.
+
 # Risks & Assumptions
 
 ## Assumptions
