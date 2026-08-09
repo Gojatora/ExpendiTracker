@@ -16,6 +16,9 @@ import axios from 'axios';
 import { getCategories } from '@/api/categories';
 import { createExpense } from '@/api/expenses';
 
+import { isConnected } from '@/lib/connectivity';
+import { addPendingExpense } from '@/lib/offlineQueue';
+
 type Category = {
   category_id: number;
   category_name: string;
@@ -64,15 +67,24 @@ export default function AddExpenseScreen() {
 
     setSubmitting(true);
     try {
-      await createExpense({
+      const expensePayload = {
         category_id: categoryId,
         expense_name: expenseName.trim(),
         amount: parsedAmount.toFixed(2),
         expense_date: date.toISOString().split('T')[0],
         note: note.trim() || null,
-      });
+      };
 
-      Alert.alert('Success', 'Expense logged.');
+      const online = await isConnected();
+
+      if (online) {
+        await createExpense(expensePayload);
+        Alert.alert('Success', 'Expense logged.');
+      } else {
+        await addPendingExpense(expensePayload);
+        Alert.alert('Saved offline', 'This expense will sync automatically once you\'re back online.');
+      }
+
       setAmount('');
       setExpenseName('');
       setNote('');
