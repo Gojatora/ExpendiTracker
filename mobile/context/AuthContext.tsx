@@ -3,6 +3,9 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { getToken } from '@/api/tokenStorage';
 import { login as apiLogin, register as apiRegister, logout as apiLogout } from '@/api/auth';
 
+import { subscribeToConnectivityChanges } from '@/lib/connectivity';
+import { syncPendingExpenses } from '@/lib/syncEngine';
+
 type AuthContextType = {
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -42,6 +45,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await apiLogout();
     setIsAuthenticated(false);
   }
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    // Attempt a sync immediately on login/app-open, in case there are
+    // leftover pending entries from a previous offline session and
+    // we're already online right now.
+    syncPendingExpenses();
+
+    const unsubscribe = subscribeToConnectivityChanges(() => {
+      syncPendingExpenses();
+    });
+
+    return () => unsubscribe();
+  }, [isAuthenticated]);
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, isLoading, login, register, logout }}>
