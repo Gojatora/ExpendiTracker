@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func
@@ -65,7 +65,8 @@ class ComparisonService:
             .group_by(Expense.category_id)
             .all()
         )
-        spend_by_category = {row.category_id: row.total_spent for row in spend_rows}
+        
+        spend_by_category = self._get_spend_by_category(user_id, month_start, today)
 
         if region_id is not None:
             benchmark_rows = (
@@ -145,3 +146,66 @@ class ComparisonService:
             })
 
         return sorted(results, key=lambda r: r["category_name"])
+
+    def get_month_over_month(self, user_id: int) -> dict:
+        today = date.today()
+        current_month_start = today.replace(day=1)
+
+        # Compute the first day of the previous month, handling the
+        # January -> December year rollover.
+        if current_month_start.month == 1:
+            prev_month_start = current_month_start.replace(year=current_month_start.year - 1, month=12)
+        else:
+            prev_month_start = current_month_start.replace(month=current_month_start.month - 1)
+        prev_month_end = current_month_start - timedelta(days=1)
+
+        current_spend = self._get_spend_by_category(user_id, current_month_start, today)
+        previous_spend = self._get_spend_by_category(user_id, prev_month_start, prev_month_end)
+
+        all_category_ids = set(current_spend.keys()) | set(previous_spend.keys())
+        categories = {
+            c.category_id: c.category_name
+            for c in self.db.query(Category).filter(
+                Category.category_id.in_(all_category_ids)
+            ).all()
+        }
+
+        results = []
+        for category_id in all_category_ids:
+            current = current_spend.get(category_id, Decimal('0'))
+            previous = previous_spend.get(category_id, Decimal('0'))
+
+            if previous > 0:
+                percent_change = round(((current - previous) / previous) * 100, 2)
+            else:
+                percent_change = None  # no meaningful percentage from a zero base
+
+            results.append({
+                "category_id": category_id,
+                "category_name": categories.get(category_id, "Unknown"),
+                "current_month_spend": current,
+                "previous_month_spend": previous,
+                "percent_change": percent_change,
+            })
+
+        return {
+            "current_month": current_month_start.strftime("%Y-%m"),
+            "previous_month": prev_month_start.strftime("%Y-%m"),
+            "categories": sorted(results, key=lambda r: r["category_name"]),
+        }
+
+    def _get_spend_by_category(self, user_id: int, start: date, end: date) -> dict:
+        rows = (
+            self.db.query(
+                Expense.category_id,
+                func.sum(Expense.amount).label("total_spent"),
+            )
+            .filter(
+                Expense.user_id == user_id,
+                Expense.expense_date >= start,
+                Expense.expense_date <= end,
+            )
+            .group_by(Expense.category_id)
+            .all()
+        )
+        return {row.category_id: row.total_spent for row in rows}

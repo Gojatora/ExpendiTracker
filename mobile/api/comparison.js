@@ -5,3 +5,8 @@ export async function getComparison(region) {
   const response = await apiClient.get('/comparison', { params });
   return response.data;
 }
+
+export async function getMonthOverMonth() {
+  const response = await apiClient.get('/comparison/month-over-month');
+  return response.data;
+}
