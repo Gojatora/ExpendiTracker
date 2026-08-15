@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications'
 import { useState, useCallback, useEffect } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { StyleSheet, Text, View, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Pressable, Alert, ActivityIndicator, Switch, Platform, TextInput, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import axios from 'axios';
@@ -10,7 +10,6 @@ import { useAuth } from '@/context/AuthContext';
 import { getMe, updateRegion } from '@/api/auth';
 import { getRegions } from '@/api/regions';
 
-import { Switch, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   requestNotificationPermission,
@@ -18,6 +17,10 @@ import {
   cancelReminder,
   getReminderSettings,
 } from '@/lib/reminders';
+
+import { getCategories } from '@/api/categories';
+import { setMonthlyBudget, setCategoryBudget, getBudgetSummary } from '@/api/budget';
+import { getComparison } from '@/api/comparison';
 
 type Region = {
   region_id: number;
@@ -34,11 +37,35 @@ export default function SettingsScreen() {
   const [reminderTime, setReminderTime] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const loadRegionData = useCallback(async () => {
+  const [categories, setCategories] = useState<{ category_id: number; category_name: string }[]>([]);
+  const [monthlyBudgetInput, setMonthlyBudgetInput] = useState('');
+  const [categoryBudgetInputs, setCategoryBudgetInputs] = useState<Record<number, string>>({});
+  const [savingMonthlyBudget, setSavingMonthlyBudget] = useState(false);
+  const [savingCategoryId, setSavingCategoryId] = useState<number | null>(null);
+
+  const loadSettingsData = useCallback(async () => {
     try {
-      const [regionsData, meData] = await Promise.all([getRegions(), getMe()]);
+      const [regionsData, meData, categoriesData, budgetSummary] = await Promise.all([
+        getRegions(),
+        getMe(),
+        getCategories(),
+        getBudgetSummary(),
+      ]);
       setRegions(regionsData);
       setSelectedRegionId(meData.region_id);
+      setCategories(categoriesData);
+
+      setMonthlyBudgetInput(
+        budgetSummary.monthly_budget !== null ? String(budgetSummary.monthly_budget) : ''
+      );
+
+      const prefill: Record<number, string> = {};
+      for (const cat of budgetSummary.categories) {
+        if (cat.category_budget !== null) {
+          prefill[cat.category_id] = String(cat.category_budget);
+        }
+      }
+      setCategoryBudgetInputs(prefill);
     } catch (err) {
       Alert.alert('Error', 'Could not load settings.');
     }
@@ -47,8 +74,8 @@ export default function SettingsScreen() {
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      loadRegionData().finally(() => setLoading(false));
-    }, [loadRegionData])
+      loadSettingsData().finally(() => setLoading(false));
+    }, [loadSettingsData])
   );
 
   useEffect(() => {
@@ -77,6 +104,80 @@ export default function SettingsScreen() {
       setSaving(false);
     }
   };
+ 
+  const handleSaveMonthlyBudget = async () => {
+    const parsed = parseFloat(monthlyBudgetInput);
+    if (isNaN(parsed) || parsed < 0) {
+      Alert.alert('Invalid amount', 'Please enter a valid budget amount.');
+      return;
+    }
+    setSavingMonthlyBudget(true);
+    try {
+      await setMonthlyBudget(parsed.toFixed(2));
+      Alert.alert('Saved', 'Monthly budget updated.');
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        Alert.alert('Error', err.response?.data?.detail ?? 'Failed to save budget.');
+      } else {
+        Alert.alert('Error', 'Something went wrong.');
+      }
+    } finally {
+      setSavingMonthlyBudget(false);
+    }
+  };
+
+  const [autofilling, setAutofilling] = useState(false);
+
+  const handleAutofillFromBenchmark = async () => {
+    setAutofilling(true);
+    try {
+      const selectedRegion = regions.find((r) => r.region_id === selectedRegionId);
+      const comparisonData = await getComparison(selectedRegion?.region_name);
+
+      setCategoryBudgetInputs((prev) => {
+        const updated = { ...prev };
+        for (const cat of comparisonData.categories) {
+          const alreadyHasValue = updated[cat.category_id] && updated[cat.category_id].trim() !== '';
+          if (!alreadyHasValue && cat.benchmark_avg !== null) {
+            updated[cat.category_id] = String(cat.benchmark_avg);
+          }
+        }
+        return updated;
+      });
+
+      Alert.alert('Autofilled', 'Empty category budgets filled with PSA benchmark values.');
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        Alert.alert('Error', err.response?.data?.detail ?? 'Failed to load benchmark data.');
+      } else {
+        Alert.alert('Error', 'Something went wrong.');
+      }
+    } finally {
+      setAutofilling(false);
+    }
+  };
+
+  const handleSaveCategoryBudget = async (categoryId: number) => {
+    const value = categoryBudgetInputs[categoryId] ?? '';
+    const parsed = parseFloat(value);
+    if (isNaN(parsed) || parsed < 0) {
+      Alert.alert('Invalid amount', 'Please enter a valid budget amount.');
+      return;
+    }
+    setSavingCategoryId(categoryId);
+    try {
+      await setCategoryBudget(categoryId, parsed.toFixed(2));
+      Alert.alert('Saved', 'Category budget updated.');
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        Alert.alert('Error', err.response?.data?.detail ?? 'Failed to save budget.');
+      } else {
+        Alert.alert('Error', 'Something went wrong.');
+      }
+    } finally {
+      setSavingCategoryId(null);
+    }
+  };  
 
   const handleToggleReminder = async (value: boolean) => {
   if (value) {
@@ -124,66 +225,130 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <Text style={styles.title}>Settings</Text>
 
-      <Text style={styles.label}>Region</Text>
-      <Text style={styles.hint}>
-        Used to compare your spending against benchmarks for your area. If
-        not set, comparisons use the national average instead.
-      </Text>
-      <View style={styles.pickerWrapper}>
-        <Picker
-          selectedValue={selectedRegionId}
-          onValueChange={(value) => setSelectedRegionId(value)}
+        <Text style={styles.label}>Region</Text>
+        <Text style={styles.hint}>
+          Used to compare your spending against benchmarks for your area. If
+          not set, comparisons use the national average instead.
+        </Text>
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={selectedRegionId}
+            onValueChange={(value) => setSelectedRegionId(value)}
+          >
+            <Picker.Item label="Not set (use national average)" value={null} />
+            {regions.map((region) => (
+              <Picker.Item
+                key={region.region_id}
+                label={region.region_name}
+                value={region.region_id}
+              />
+            ))}
+          </Picker>
+        </View>
+
+        <Pressable
+          style={[styles.saveButton, saving && styles.buttonDisabled]}
+          onPress={handleSaveRegion}
+          disabled={saving}
         >
-          <Picker.Item label="Not set (use national average)" value={null} />
-          {regions.map((region) => (
-            <Picker.Item
-              key={region.region_id}
-              label={region.region_name}
-              value={region.region_id}
-            />
-          ))}
-        </Picker>
-      </View>
+          <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Region'}</Text>
+        </Pressable>
+        
+        <Text style={styles.label}>Monthly Budget</Text>
+        <Text style={styles.hint}>
+          Your overall spending target for the month.
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TextInput
+            style={[styles.input, { flex: 1 }]}
+            value={monthlyBudgetInput}
+            onChangeText={setMonthlyBudgetInput}
+            placeholder="e.g. 15000.00"
+            keyboardType="decimal-pad"
+          />
+          <Pressable
+            style={[styles.saveButton, { paddingHorizontal: 16 }, savingMonthlyBudget && styles.buttonDisabled]}
+            onPress={handleSaveMonthlyBudget}
+            disabled={savingMonthlyBudget}
+          >
+            <Text style={styles.saveButtonText}>{savingMonthlyBudget ? '...' : 'Save'}</Text>
+          </Pressable>
+        </View>
 
-      <Pressable
-        style={[styles.saveButton, saving && styles.buttonDisabled]}
-        onPress={handleSaveRegion}
-        disabled={saving}
-      >
-        <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Region'}</Text>
-      </Pressable>
-      
-      <Text style={styles.label}>Daily Reminder</Text>
-      <Text style={styles.hint}>
-        Get a daily nudge to log your expenses.
-      </Text>
-      <View style={styles.reminderRow}>
-        <Text style={styles.reminderRowText}>Enable reminder</Text>
-        <Switch value={reminderEnabled} onValueChange={handleToggleReminder} />
-      </View>
-
-      {reminderEnabled && (
-        <Pressable style={styles.input} onPress={() => setShowTimePicker(true)}>
-          <Text>
-            {reminderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        <Text style={[styles.label, { marginTop: 20 }]}>Category Budgets</Text>
+        <Text style={styles.hint}>
+          Optional per-category spending caps.
+        </Text>
+        <Pressable
+          style={[styles.saveButton, { backgroundColor: '#FFB627', marginBottom: 12 }, autofilling && styles.buttonDisabled]}
+          onPress={handleAutofillFromBenchmark}
+          disabled={autofilling}
+        >
+          <Text style={[styles.saveButtonText, { color: '#292F36' }]}>
+            {autofilling ? 'Loading...' : 'Autofill from PSA Benchmark'}
           </Text>
         </Pressable>
-      )}
+        {categories.map((cat) => (
+          <View key={cat.category_id} style={{ flexDirection: 'row', gap: 8, marginTop: 8, alignItems: 'center' }}>
+            <Text style={{ flex: 1, fontSize: 13 }}>{cat.category_name}</Text>
+            <TextInput
+              style={[styles.input, { width: 100 }]}
+              value={categoryBudgetInputs[cat.category_id] ?? ''}
+              onChangeText={(text) =>
+                setCategoryBudgetInputs((prev) => ({ ...prev, [cat.category_id]: text }))
+              }
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+            />
+            <Pressable
+              style={[
+                styles.saveButton,
+                { paddingHorizontal: 12, paddingVertical: 8 },
+                savingCategoryId === cat.category_id && styles.buttonDisabled,
+              ]}
+              onPress={() => handleSaveCategoryBudget(cat.category_id)}
+              disabled={savingCategoryId === cat.category_id}
+            >
+              <Text style={styles.saveButtonText}>
+                {savingCategoryId === cat.category_id ? '...' : 'Save'}
+              </Text>
+            </Pressable>
+          </View>
+        ))}
+        
+        <Text style={styles.label}>Daily Reminder</Text>
+        <Text style={styles.hint}>
+          Get a daily nudge to log your expenses.
+        </Text>
+        <View style={styles.reminderRow}>
+          <Text style={styles.reminderRowText}>Enable reminder</Text>
+          <Switch value={reminderEnabled} onValueChange={handleToggleReminder} />
+        </View>
 
-      {showTimePicker && (
-        <DateTimePicker
-          value={reminderTime}
-          mode="time"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleTimeChange}
-        />
-      )}
-      
-      <Pressable style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Log Out</Text>
-      </Pressable>
+        {reminderEnabled && (
+          <Pressable style={styles.input} onPress={() => setShowTimePicker(true)}>
+            <Text>
+              {reminderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          </Pressable>
+        )}
+
+        {showTimePicker && (
+          <DateTimePicker
+            value={reminderTime}
+            mode="time"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleTimeChange}
+          />
+        )}
+        
+        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </Pressable>
+      </ScrollView> 
     </SafeAreaView>
   );
 }

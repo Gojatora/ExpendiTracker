@@ -233,6 +233,29 @@ at the cost of two round-trips instead of one on dashboard load.
 - No code-level fix exists for this within Expo Go. Documented here as a
   known constraint rather than something to keep debugging indefinitely.
 
+  **Schema change: added manually via SQL, not through create_all()**
+
+- `monthly_budget` column on `users` and the new `category_budgets` table
+  were added after real data already existed in the database - the first
+  time this project needed a schema change post-launch, unlike Sprint 1
+  where all tables were created fresh.
+- Applied via manual ALTER TABLE / CREATE TABLE in DBeaver rather than
+  introducing a migration tool (Alembic) for one small, purely additive
+  change. If further schema changes are needed later, revisit this
+  decision - accumulating undocumented manual SQL changes doesn't scale.
+- Exact SQL run:
+```sql
+  ALTER TABLE users ADD COLUMN monthly_budget NUMERIC(10, 2);
+
+  CREATE TABLE category_budgets (
+      budget_id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(user_id),
+      category_id INTEGER NOT NULL REFERENCES categories(category_id),
+      amount NUMERIC(10, 2) NOT NULL,
+      CONSTRAINT uq_user_category_budget UNIQUE (user_id, category_id)
+  );
+```
+
 # Risks & Assumptions
 
 ## Assumptions
