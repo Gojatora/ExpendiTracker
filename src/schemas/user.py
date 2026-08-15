@@ -16,6 +16,7 @@ class UserOut(BaseModel):
     user_id: int
     email: EmailStr
     monthly_income: Optional[Decimal] = None
+    monthly_budget: Optional[Decimal] = None
     region_id: Optional[int] = None
     created_at: datetime
 

@@ -60,6 +60,7 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)  # never store plaintext passwords
     monthly_income = Column(Numeric(10, 2), nullable=True)
+    monthly_budget = Column(Numeric(10, 2), nullable=True)
 
     # ForeignKey creates an actual database-enforced link: Postgres will reject
     # any region_id that doesn't exist in the regions table.
@@ -121,3 +122,22 @@ class RegionalBenchmark(Base):
 
     region = relationship("Region", back_populates="benchmarks")
     category = relationship("Category", back_populates="benchmarks")
+
+class CategoryBudget(Base):
+    """User-set spending caps per category. Optional - a user may have
+    an overall monthly_budget with no per-category breakdown, or vice
+    versa, or both, or neither.
+    """
+    __tablename__ = "category_budgets"
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category_id", name="uq_user_category_budget"),
+    )
+
+    budget_id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False, index=True)
+    category_id = Column(Integer, ForeignKey("categories.category_id"), nullable=False)
+    amount = Column(Numeric(10, 2), nullable=False)
+
+    user = relationship("User")
+    category = relationship("Category")
