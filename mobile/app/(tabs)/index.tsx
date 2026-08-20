@@ -43,9 +43,10 @@ type RecentExpenseItem = {
   expense_id: number | null;
   expense_name: string;
   amount: string;
-  expense_date: string; // ISO date string, e.g. "2026-08-12"
+  expense_date: string;
   category_id: number | null;
   category_name: string | null;
+  note: string | null;
   pending: boolean;
 };
 
@@ -89,6 +90,14 @@ export default function HomeScreen() {
   const [monthFilter, setMonthFilter] = useState<string>(ALL_FILTER);
   const [categoryFilter, setCategoryFilter] = useState<string>(ALL_FILTER);
 
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<RecentExpenseItem | null>(null);
+
+  const openExpenseDetail = (item: RecentExpenseItem) => {
+    setSelectedExpense(item);
+    setDetailModalVisible(true);
+  };
+
   const fetchData = useCallback(async () => {
     setError(null);
 
@@ -104,6 +113,7 @@ export default function HomeScreen() {
       expense_date: entry.data.expense_date,
       category_id: entry.data.category_id ?? null,
       category_name: entry.data.category_name ?? null,
+      note: entry.data.note ?? null,
       pending: true,
     }));
 
@@ -125,6 +135,7 @@ export default function HomeScreen() {
         expense_date: e.expense_date,
         category_id: e.category_id ?? null,
         category_name: e.category_name ?? null,
+        note: e.note ?? null,
         pending: false,
       }));
 
@@ -204,6 +215,14 @@ export default function HomeScreen() {
     });
   }, [allExpenses, monthFilter, categoryFilter]);
 
+    const regionTotal = useMemo(() => {
+    return categories.reduce((sum, c) => {
+      return c.benchmark_avg ? sum + parseFloat(c.benchmark_avg) : sum;
+    }, 0);
+  }, [categories]);
+
+  const [totalSpendingTab, setTotalSpendingTab] = useState<'region' | 'custom'>('region');
+
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -211,6 +230,14 @@ export default function HomeScreen() {
       </SafeAreaView>
     );
   }
+
+  const categoryNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const c of categories) {
+      map.set(c.category_id, c.category_name);
+    }
+    return map;
+  }, [categories]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -244,7 +271,9 @@ export default function HomeScreen() {
               <Text style={styles.summaryLabelWarning}>Over budget</Text>
               <Text style={styles.summaryValueWarning}>
                 {budget.over_budget_categories.length > 0
-                  ? budget.over_budget_categories[0]
+                  ? budget.over_budget_categories.length === 1
+                    ? budget.over_budget_categories[0]
+                    : `${budget.over_budget_categories[0]} +${budget.over_budget_categories.length - 1} more`
                   : 'None'}
               </Text>
             </View>
@@ -262,10 +291,20 @@ export default function HomeScreen() {
           <Text style={styles.emptyText}>No expenses logged yet.</Text>
         ) : (
           recentExpenses.map((item) => (
-            <View key={item.key} style={styles.expenseRow}>
+            <TouchableOpacity
+              key={item.key}
+              style={styles.expenseRow}
+              activeOpacity={0.7}
+              onPress={() => openExpenseDetail(item)}
+            >
               <View style={styles.expenseRowLeft}>
                 <Text style={styles.expenseName}>{item.expense_name}</Text>
-                <Text style={styles.expenseDate}>{item.expense_date}</Text>
+                <Text style={styles.expenseDate}>
+                  {item.expense_date}
+                  {item.category_id != null && categoryNameById.get(item.category_id)
+                    ? ` · ${categoryNameById.get(item.category_id)}`
+                    : ''}
+                </Text>
               </View>
               <View style={styles.expenseRowRight}>
                 <Text style={styles.expenseAmount}>₱{item.amount}</Text>
@@ -273,7 +312,7 @@ export default function HomeScreen() {
                   <Text style={styles.pendingBadge}>Pending sync</Text>
                 )}
               </View>
-            </View>
+            </TouchableOpacity>
           ))
         )}
       </ScrollView>
@@ -290,36 +329,90 @@ export default function HomeScreen() {
           onPress={() => setBenchmarkModalVisible(false)}
         >
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHeaderRow}>
-              <View style={styles.modalHeaderTextWrap}>
-                <Text style={styles.modalTitle}>Total spending this month</Text>
-                <Text style={styles.modalSubtitle}>
-                  vs. {regionName ?? 'national average'}
-                </Text>
-              </View>
+                        <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalTitle}>Total spending this month</Text>
               <TouchableOpacity onPress={() => setBenchmarkModalVisible(false)}>
                 <Text style={styles.modalCloseIcon}>✕</Text>
               </TouchableOpacity>
             </View>
 
+            <View style={styles.tabRow}>
+              <Pressable
+                style={[styles.tabButton, totalSpendingTab === 'custom' && styles.tabButtonActive]}
+                onPress={() => setTotalSpendingTab('custom')}
+              >
+                <Text style={[styles.tabButtonText, totalSpendingTab === 'custom' && styles.tabButtonTextActive]}>
+                  Vs Custom
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.tabButton, totalSpendingTab === 'region' && styles.tabButtonActive]}
+                onPress={() => setTotalSpendingTab('region')}
+              >
+                <Text style={[styles.tabButtonText, totalSpendingTab === 'region' && styles.tabButtonTextActive]}>
+                  Vs Region
+                </Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.totalsRow}>
+              <View>
+                <Text style={styles.totalsLabel}>Current Total</Text>
+                <Text style={styles.totalsValue}>₱{budget?.total_spent ?? '0.00'}</Text>
+              </View>
+              <View>
+                <Text style={styles.totalsLabelMuted}>
+                  {totalSpendingTab === 'custom' ? 'Custom Total' : 'Region Total'}
+                </Text>
+                <Text style={styles.totalsValueMuted}>
+                  {totalSpendingTab === 'custom'
+                    ? `₱${budget?.monthly_budget ?? '—'}`
+                    : `₱${regionTotal.toFixed(2)}`}
+                </Text>
+                {totalSpendingTab === 'region' && (
+                  <Text style={styles.totalsSubtext}>
+                    vs. {regionName ?? 'national average'}
+                  </Text>
+                )}
+              </View>
+            </View>
+
             <ScrollView contentContainerStyle={styles.benchmarkGrid}>
-              {categories.map((item) => (
-                <View key={item.category_id} style={styles.benchmarkCell}>
-                  <Text style={styles.benchmarkCategoryName}>{item.category_name}</Text>
-                  <View style={styles.benchmarkValueRow}>
-                    <Text style={styles.benchmarkValueText}>
-                      {item.user_spent ? `₱${item.user_spent}` : 'No Spending'}
-                      {' | '}
-                      {item.benchmark_avg ? `₱${item.benchmark_avg}` : '—'}
-                    </Text>
-                    {item.status && item.status !== 'equal' && (
-                      <Text style={item.status === 'above' ? styles.badgeAbove : styles.badgeBelow}>
-                        {item.status === 'above' ? '↑ Above' : '↓ Below'}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              ))}
+              {totalSpendingTab === 'region'
+                ? categories.map((item) => (
+                    <View key={item.category_id} style={styles.benchmarkCell}>
+                      <Text style={styles.benchmarkCategoryName}>{item.category_name}</Text>
+                      <View style={styles.benchmarkValueRow}>
+                        <Text style={styles.benchmarkValueText}>
+                          {item.user_spent ? `₱${item.user_spent}` : 'No Spending'}
+                          {' | '}
+                          {item.benchmark_avg ? `₱${item.benchmark_avg}` : '—'}
+                        </Text>
+                        {item.status && item.status !== 'equal' && (
+                          <Text style={item.status === 'above' ? styles.badgeAbove : styles.badgeBelow}>
+                            {item.status === 'above' ? '↑ Above' : '↓ Below'}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  ))
+                : (budget?.categories ?? []).map((item) => (
+                    <View key={item.category_id} style={styles.benchmarkCell}>
+                      <Text style={styles.benchmarkCategoryName}>{item.category_name}</Text>
+                      <View style={styles.benchmarkValueRow}>
+                        <Text style={styles.benchmarkValueText}>
+                          {parseFloat(item.amount_spent) > 0 ? `₱${item.amount_spent}` : 'No Spending'}
+                          {' | '}
+                          {item.category_budget !== null ? `₱${item.category_budget}` : 'No budget set'}
+                        </Text>
+                        {item.category_budget !== null && (
+                          <Text style={item.over_budget ? styles.badgeAbove : styles.badgeBelow}>
+                            {item.over_budget ? '↑ Above' : '↓ Below'}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  ))}
             </ScrollView>
           </Pressable>
         </Pressable>
@@ -384,10 +477,20 @@ export default function HomeScreen() {
                 <Text style={styles.emptyText}>No expenses match this filter.</Text>
               ) : (
                 filteredHistory.map((item) => (
-                  <View key={item.key} style={styles.expenseRow}>
+                  <TouchableOpacity
+                    key={item.key}
+                    style={styles.expenseRow}
+                    activeOpacity={0.7}
+                    onPress={() => openExpenseDetail(item)}
+                  >
                     <View style={styles.expenseRowLeft}>
                       <Text style={styles.expenseName}>{item.expense_name}</Text>
-                      <Text style={styles.expenseDate}>{item.expense_date}</Text>
+                      <Text style={styles.expenseDate}>
+                        {item.expense_date}
+                        {item.category_id != null && categoryNameById.get(item.category_id)
+                          ? ` · ${categoryNameById.get(item.category_id)}`
+                          : ''}
+                      </Text>
                     </View>
                     <View style={styles.expenseRowRight}>
                       <Text style={styles.expenseAmount}>₱{item.amount}</Text>
@@ -395,10 +498,66 @@ export default function HomeScreen() {
                         <Text style={styles.pendingBadge}>Pending sync</Text>
                       )}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
             </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+            {/* Expense detail popup */}
+      <Modal
+        visible={detailModalVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setDetailModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setDetailModalVisible(false)}
+        >
+          <Pressable style={styles.detailModalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalTitle}>Expense Details</Text>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                <Text style={styles.modalCloseIcon}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {selectedExpense && (
+              <View style={{ gap: 12 }}>
+                <View>
+                  <Text style={styles.detailLabel}>Name</Text>
+                  <Text style={styles.detailValue}>{selectedExpense.expense_name}</Text>
+                </View>
+                <View>
+                  <Text style={styles.detailLabel}>Amount</Text>
+                  <Text style={styles.detailValue}>₱{selectedExpense.amount}</Text>
+                </View>
+                <View>
+                  <Text style={styles.detailLabel}>Date</Text>
+                  <Text style={styles.detailValue}>{selectedExpense.expense_date}</Text>
+                </View>
+                <View>
+                  <Text style={styles.detailLabel}>Category</Text>
+                  <Text style={styles.detailValue}>
+                    {selectedExpense.category_id != null
+                      ? categoryNameById.get(selectedExpense.category_id) ?? 'Unknown'
+                      : 'Unknown'}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={styles.detailLabel}>Note</Text>
+                  <Text style={styles.detailValue}>
+                    {selectedExpense.note ?? 'No note added.'}
+                  </Text>
+                </View>
+                {selectedExpense.pending && (
+                  <Text style={styles.pendingBadge}>Pending sync</Text>
+                )}
+              </View>
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -502,7 +661,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: 16,
     padding: 18,
-    maxHeight: '80%',
+    maxHeight: '92%',
   },
   modalHeaderRow: {
     flexDirection: 'row',
@@ -564,4 +723,36 @@ const styles = StyleSheet.create({
     color: COLORS.dark,         // added — Android default text color can render too light/clipped-looking
   },
   historyList: { marginTop: 4 },
+  
+  tabRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+  },
+  tabButtonActive: { backgroundColor: COLORS.dark },
+  tabButtonText: { fontSize: 13, color: '#666', fontWeight: '500' },
+  tabButtonTextActive: { color: COLORS.white },
+  
+  totalsRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  marginBottom: 16,
+  },
+  totalsLabel: { fontSize: 13, color: COLORS.yellow, fontWeight: '700' },
+  totalsValue: { fontSize: 20, fontWeight: '700', color: COLORS.yellow, marginTop: 2 },
+  totalsLabelMuted: { fontSize: 13, color: COLORS.muted, fontWeight: '700', textAlign: 'right' },
+  totalsValueMuted: { fontSize: 16, fontWeight: '600', color: COLORS.muted, marginTop: 2, textAlign: 'right' },
+
+  totalsSubtext: { fontSize: 11, color: COLORS.muted, marginTop: 2, textAlign: 'right' },
+  
+  detailModalCard: {
+  backgroundColor: COLORS.white,
+  borderRadius: 16,
+  padding: 18,
+  },
+  detailLabel: { fontSize: 12, color: COLORS.muted, fontWeight: '600' },
+  detailValue: { fontSize: 15, color: COLORS.dark, marginTop: 2 },
 });
