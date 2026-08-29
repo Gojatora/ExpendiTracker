@@ -7,8 +7,6 @@ export default function TabLayout() {
       screenOptions={{
         headerStyle: {
           backgroundColor: '#FFB627',
-          borderBottomLeftRadius: 100,
-          borderBottomRightRadius: 100,
           elevation: 20,
         },
 
