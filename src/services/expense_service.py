@@ -113,4 +113,7 @@ class ExpenseService:
         if end_date is not None:
             query = query.filter(Expense.expense_date <= end_date)
 
-        return query.order_by(Expense.expense_date.desc()).all()
+        return query.order_by(
+            Expense.expense_date.desc(),
+            Expense.created_at.desc(),
+        ).all()

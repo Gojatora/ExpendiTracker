@@ -3,6 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import {
   StyleSheet,
   Text,
+  TextInput,
   View,
   ActivityIndicator,
   ScrollView,
@@ -10,14 +11,17 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
+  Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 
 import { getComparison } from '@/api/comparison';
-import { getExpenses } from '@/api/expenses';
-import { getPendingExpenses } from '@/lib/offlineQueue';
+import { getExpenses, updateExpense, deleteExpense } from '@/api/expenses';
+import { getPendingExpenses, updatePendingExpense, removePendingExpense } from '@/lib/offlineQueue';
 import { getBudgetSummary } from '@/api/budget';
 
 const COLORS = {
@@ -85,6 +89,7 @@ export default function HomeScreen() {
 
   const [benchmarkModalVisible, setBenchmarkModalVisible] = useState(false);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [totalSpendingTab, setTotalSpendingTab] = useState<'region' | 'custom'>('region');
 
   // Filters for the history modal - "all" means no filter applied.
   const [monthFilter, setMonthFilter] = useState<string>(ALL_FILTER);
@@ -92,11 +97,15 @@ export default function HomeScreen() {
 
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<RecentExpenseItem | null>(null);
-
-  const openExpenseDetail = (item: RecentExpenseItem) => {
-    setSelectedExpense(item);
-    setDetailModalVisible(true);
-  };
+  const [editMode, setEditMode] = useState(false);
+  const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
+  const [editExpenseName, setEditExpenseName] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [editNote, setEditNote] = useState('');
+  const [editDate, setEditDate] = useState(new Date());
+  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setError(null);
@@ -215,13 +224,110 @@ export default function HomeScreen() {
     });
   }, [allExpenses, monthFilter, categoryFilter]);
 
-    const regionTotal = useMemo(() => {
+  const regionTotal = useMemo(() => {
     return categories.reduce((sum, c) => {
       return c.benchmark_avg ? sum + parseFloat(c.benchmark_avg) : sum;
     }, 0);
   }, [categories]);
 
-  const [totalSpendingTab, setTotalSpendingTab] = useState<'region' | 'custom'>('region');
+  // Must stay above any early return (rules of hooks) - every hook runs
+  // in the same order on every render, loading or not.
+  const categoryNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const c of categories) {
+      map.set(c.category_id, c.category_name);
+    }
+    return map;
+  }, [categories]);
+
+  const openExpenseDetail = (item: RecentExpenseItem) => {
+    setSelectedExpense(item);
+    setEditMode(false);
+    setEditCategoryId(item.category_id);
+    setEditExpenseName(item.expense_name);
+    setEditAmount(item.amount);
+    setEditNote(item.note ?? '');
+    setEditDate(new Date(item.expense_date));
+    setDetailModalVisible(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedExpense) return;
+
+    if (!editCategoryId) {
+      Alert.alert('Missing category', 'Please select a category.');
+      return;
+    }
+    if (!editExpenseName.trim()) {
+      Alert.alert('Missing name', 'Please enter an expense name.');
+      return;
+    }
+    const parsedAmount = parseFloat(editAmount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert('Invalid amount', 'Please enter a valid amount greater than 0.');
+      return;
+    }
+
+    const payload = {
+      category_id: editCategoryId,
+      expense_name: editExpenseName.trim(),
+      amount: parsedAmount.toFixed(2),
+      expense_date: editDate.toISOString().split('T')[0],
+      note: editNote.trim() || null,
+    };
+
+    setSavingEdit(true);
+    try {
+      if (selectedExpense.pending) {
+        await updatePendingExpense(selectedExpense.key, payload);
+      } else {
+        await updateExpense(selectedExpense.expense_id!, payload);
+      }
+      Alert.alert('Saved', 'Expense updated.');
+      setDetailModalVisible(false);
+      await fetchData();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        Alert.alert('Error', err.response?.data?.detail ?? 'Failed to update expense.');
+      } else {
+        Alert.alert('Error', 'Something went wrong.');
+      }
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (!selectedExpense) return;
+
+    Alert.alert('Delete expense', 'Are you sure you want to delete this expense?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            if (selectedExpense.pending) {
+              await removePendingExpense(selectedExpense.key);
+            } else {
+              await deleteExpense(selectedExpense.expense_id!);
+            }
+            setDetailModalVisible(false);
+            await fetchData();
+          } catch (err) {
+            if (axios.isAxiosError(err)) {
+              Alert.alert('Error', err.response?.data?.detail ?? 'Failed to delete expense.');
+            } else {
+              Alert.alert('Error', 'Something went wrong.');
+            }
+          } finally {
+            setDeleting(false);
+          }
+        },
+      },
+    ]);
+  };
 
   if (loading) {
     return (
@@ -230,14 +336,6 @@ export default function HomeScreen() {
       </SafeAreaView>
     );
   }
-
-  const categoryNameById = useMemo(() => {
-    const map = new Map<number, string>();
-    for (const c of categories) {
-      map.set(c.category_id, c.category_name);
-    }
-    return map;
-  }, [categories]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -329,7 +427,7 @@ export default function HomeScreen() {
           onPress={() => setBenchmarkModalVisible(false)}
         >
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-                        <View style={styles.modalHeaderRow}>
+            <View style={styles.modalHeaderRow}>
               <Text style={styles.modalTitle}>Total spending this month</Text>
               <TouchableOpacity onPress={() => setBenchmarkModalVisible(false)}>
                 <Text style={styles.modalCloseIcon}>✕</Text>
@@ -377,7 +475,7 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <ScrollView contentContainerStyle={styles.benchmarkGrid}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.benchmarkGrid}>
               {totalSpendingTab === 'region'
                 ? categories.map((item) => (
                     <View key={item.category_id} style={styles.benchmarkCell}>
@@ -506,7 +604,7 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
-            {/* Expense detail popup */}
+      {/* Expense detail popup */}
       <Modal
         visible={detailModalVisible}
         animationType="fade"
@@ -525,7 +623,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {selectedExpense && (
+            {selectedExpense && !editMode && (
               <View style={{ gap: 12 }}>
                 <View>
                   <Text style={styles.detailLabel}>Name</Text>
@@ -556,6 +654,78 @@ export default function HomeScreen() {
                 {selectedExpense.pending && (
                   <Text style={styles.pendingBadge}>Pending sync</Text>
                 )}
+
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                  <Pressable
+                    style={[styles.saveButton, { flex: 1 }]}
+                    onPress={() => setEditMode(true)}
+                  >
+                    <Text style={styles.saveButtonText}>Edit</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.saveButton, { flex: 1, backgroundColor: COLORS.red }, deleting && styles.buttonDisabled]}
+                    onPress={handleDelete}
+                    disabled={deleting}
+                  >
+                    <Text style={styles.saveButtonText}>{deleting ? 'Deleting...' : 'Delete'}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {selectedExpense && editMode && (
+              <View style={{ gap: 4 }}>
+                <Text style={styles.label}>Category</Text>
+                <View style={styles.pickerWrapper}>
+                  <Picker selectedValue={editCategoryId} onValueChange={(v) => setEditCategoryId(v)}>
+                    {categories.map((cat) => (
+                      <Picker.Item key={cat.category_id} label={cat.category_name} value={cat.category_id} />
+                    ))}
+                  </Picker>
+                </View>
+
+                <Text style={styles.label}>Expense name</Text>
+                <TextInput style={styles.input} value={editExpenseName} onChangeText={setEditExpenseName} />
+
+                <Text style={styles.label}>Amount</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editAmount}
+                  onChangeText={setEditAmount}
+                  keyboardType="decimal-pad"
+                />
+
+                <Text style={styles.label}>Date</Text>
+                <Pressable style={styles.input} onPress={() => setShowEditDatePicker(true)}>
+                  <Text>{editDate.toDateString()}</Text>
+                </Pressable>
+                {showEditDatePicker && (
+                  <DateTimePicker
+                    value={editDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(_e, selected) => {
+                      setShowEditDatePicker(false);
+                      if (selected) setEditDate(selected);
+                    }}
+                  />
+                )}
+
+                <Text style={styles.label}>Note</Text>
+                <TextInput style={styles.input} value={editNote} onChangeText={setEditNote} />
+
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                  <Pressable style={[styles.saveButton, { flex: 1, backgroundColor: '#ccc' }]} onPress={() => setEditMode(false)}>
+                    <Text style={[styles.saveButtonText, { color: COLORS.dark }]}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.saveButton, { flex: 1 }, savingEdit && styles.buttonDisabled]}
+                    onPress={handleSaveEdit}
+                    disabled={savingEdit}
+                  >
+                    <Text style={styles.saveButtonText}>{savingEdit ? 'Saving...' : 'Save'}</Text>
+                  </Pressable>
+                </View>
               </View>
             )}
           </Pressable>
@@ -566,7 +736,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1},
+  container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { padding: 16 },
   errorText: { color: COLORS.red, paddingBottom: 8 },
@@ -669,7 +839,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 16,
   },
-  modalHeaderTextWrap: {      // new
+  modalHeaderTextWrap: {
     flex: 1,
     paddingRight: 12,
   },
@@ -677,7 +847,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: COLORS.dark,
-    // removed flex: 1 and paddingRight from here
   },
   modalSubtitle: {
     fontSize: 13,
@@ -715,15 +884,15 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 10,
     overflow: 'hidden',
-    justifyContent: 'center',   // added
-    height: 52,                 // added — wrapper now drives the height
+    justifyContent: 'center',
+    height: 52,
   },
   picker: {
-    height: 52,                 // was 44
-    color: COLORS.dark,         // added — Android default text color can render too light/clipped-looking
+    height: 52,
+    color: COLORS.dark,
   },
   historyList: { marginTop: 4 },
-  
+
   tabRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   tabButton: {
     flex: 1,
@@ -735,24 +904,41 @@ const styles = StyleSheet.create({
   tabButtonActive: { backgroundColor: COLORS.dark },
   tabButtonText: { fontSize: 13, color: '#666', fontWeight: '500' },
   tabButtonTextActive: { color: COLORS.white },
-  
+
   totalsRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   totalsLabel: { fontSize: 13, color: COLORS.yellow, fontWeight: '700' },
   totalsValue: { fontSize: 20, fontWeight: '700', color: COLORS.yellow, marginTop: 2 },
   totalsLabelMuted: { fontSize: 13, color: COLORS.muted, fontWeight: '700', textAlign: 'right' },
   totalsValueMuted: { fontSize: 16, fontWeight: '600', color: COLORS.muted, marginTop: 2, textAlign: 'right' },
-
   totalsSubtext: { fontSize: 11, color: COLORS.muted, marginTop: 2, textAlign: 'right' },
-  
+
   detailModalCard: {
-  backgroundColor: COLORS.white,
-  borderRadius: 16,
-  padding: 18,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 18,
   },
   detailLabel: { fontSize: 12, color: COLORS.muted, fontWeight: '600' },
   detailValue: { fontSize: 15, color: COLORS.dark, marginTop: 2 },
+
+  // Shared button styles (used by region/reminder/edit/delete actions)
+  saveButton: {
+    backgroundColor: COLORS.dark,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  saveButtonText: { color: COLORS.white, fontWeight: '600' },
+  buttonDisabled: { opacity: 0.5 },
+  label: { fontSize: 13, color: COLORS.muted, marginTop: 8, marginBottom: 4 },
+  input: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 12,
+    justifyContent: 'center',
+  },
 });

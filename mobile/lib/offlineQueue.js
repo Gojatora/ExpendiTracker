@@ -24,3 +24,11 @@ export async function removePendingExpense(localId) {
   const updated = pending.filter((entry) => entry.localId !== localId);
   await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(updated));
 }
+
+export async function updatePendingExpense(localId, newData) {
+  const pending = await getPendingExpenses();
+  const updated = pending.map((entry) =>
+    entry.localId === localId ? { ...entry, data: newData } : entry
+  );
+  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(updated));
+}
