@@ -200,7 +200,7 @@ export default function DashboardScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={styles.scrollContent}
@@ -266,7 +266,7 @@ export default function DashboardScreen() {
             xKey="month"
             yKeys={['total']}
             domainPadding={{ left: 20, right: 20, top: 20, bottom: 10 }}
-            axisOptions={{ font: axisFont }}
+            axisOptions={{ font: axisFont, tickCount: yearlyTrend.length }}
           >
             {({ points }) => (
               <Line
@@ -319,12 +319,12 @@ export default function DashboardScreen() {
               </Text>
             ) : (
               <View style={styles.chartWrapper}>
-                                <CartesianChart
+                <CartesianChart
                   data={chartData}
                   xKey="category"
                   yKeys={['overValue', 'underValue']}
                   domainPadding={{ left: 30, right: 30, top: 30 }}
-                  axisOptions={{ font: axisFont, formatYLabel: (v) => `${v}%` }}
+                  axisOptions={{ font: axisFont, formatYLabel: (v) => `${v}%`, tickCount: monthData?.categories.filter((c) => c.percent_change !== null).length }}
                 >
                   {({ points, chartBounds }) => (
                     <>
@@ -359,43 +359,53 @@ export default function DashboardScreen() {
             <Text style={styles.subheading}>
               {monthData?.previous_month} vs. {monthData?.current_month}
             </Text>
-              {monthData && monthData.categories.some((c) => c.percent_change !== null) && (
-              <View style={styles.chartWrapperSmall}>
-                <CartesianChart
-                  data={monthData.categories
-                    .filter((c) => c.percent_change !== null)
-                    .map((c) => {
-                      const change = parseFloat(c.percent_change!);
-                      return {
-                        category: c.category_name.length > 8 ? c.category_name.slice(0, 7) + '…' : c.category_name,
-                        increase: change > 0 ? change : 0,
-                        decrease: change <= 0 ? change : 0,
-                      };
-                    })}
-                  xKey="category"
-                  yKeys={['increase', 'decrease']}
-                  domainPadding={{ left: 30, right: 30, top: 20, bottom: 20 }}
-                  axisOptions={{ font: axisFont, formatYLabel: (v) => `${v}%` }}
-                >
-                  {({ points, chartBounds }) => (
-                    <>
-                      <Bar
-                        points={points.increase}
-                        chartBounds={chartBounds}
-                        color={COLORS.red}
-                        roundedCorners={{ topLeft: 4, topRight: 4 }}
-                      />
-                      <Bar
-                        points={points.decrease}
-                        chartBounds={chartBounds}
-                        color={COLORS.greenGood}
-                        roundedCorners={{ bottomLeft: 4, bottomRight: 4 }}
-                      />
-                    </>
-                  )}
-                </CartesianChart>
-              </View>
-            )}
+              {monthData && monthData.categories.some((c) => c.percent_change !== null) && (() => {
+              const withChange = monthData.categories.filter((c) => c.percent_change !== null);
+              const maxAbsPercent = Math.max(
+                ...withChange.map((c) => Math.abs(parseFloat(c.percent_change!))),
+                1 // avoid divide-by-zero if every change happens to be 0
+              );
+
+              return (
+                <View style={styles.divergingChartWrapper}>
+                  {withChange.map((c) => {
+                    const percent = parseFloat(c.percent_change!);
+                    const barWidthPercent = (Math.abs(percent) / maxAbsPercent) * 50;
+                    const isIncrease = percent >= 0;
+
+                    return (
+                      <View key={c.category_id} style={styles.divergingRow}>
+                        <Text style={styles.divergingLabel} numberOfLines={1}>
+                          {c.category_name}
+                        </Text>
+                        <View style={styles.divergingTrack}>
+                          <View style={styles.divergingZeroLine} />
+                          <View
+                            style={[
+                              styles.divergingBar,
+                              {
+                                left: isIncrease ? '50%' : `${50 - barWidthPercent}%`,
+                                width: `${barWidthPercent}%`,
+                                backgroundColor: isIncrease ? COLORS.red : COLORS.greenGood,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Text
+                          style={[
+                            styles.divergingPercent,
+                            { color: isIncrease ? COLORS.red : COLORS.greenGood },
+                          ]}
+                        >
+                          {isIncrease ? '+' : ''}
+                          {percent.toFixed(0)}%
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })()}
             {!monthData || monthData.categories.length === 0 ? (
               <Text style={styles.emptyText}>No spending data yet to compare.</Text>
             ) : (
@@ -501,6 +511,28 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
   },
-  chartWrapperSmall: { height: 220, marginBottom: 16 },
+  chartWrapperSmall: { height: 300, marginBottom: 16 },
   sectionHeading: { fontSize: 15, fontWeight: '700', color: COLORS.dark, marginTop: 4, marginBottom: 8 },
+  
+  divergingChartWrapper: { marginBottom: 16 },
+  divergingRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
+  divergingLabel: { width: 90, fontSize: 12, color: COLORS.dark },
+  divergingTrack: {
+    flex: 1,
+    height: 18,
+    backgroundColor: '#eee',
+    borderRadius: 4,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  divergingZeroLine: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: '#bbb',
+  },
+  divergingBar: { position: 'absolute', top: 0, bottom: 0, borderRadius: 2 },
+  divergingPercent: { width: 55, fontSize: 12, fontWeight: '700', textAlign: 'right' },
 });

@@ -159,7 +159,7 @@ export default function AddExpenseScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.label}>Date (applies to all entries below)</Text>
         <Pressable style={styles.input} onPress={() => setShowDatePicker(true)}>

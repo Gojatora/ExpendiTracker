@@ -357,16 +357,18 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
 
-        {budget?.monthly_budget != null && (
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryCardNeutral}>
-              <Text style={styles.summaryLabelMuted}>Budget left</Text>
-              <Text style={styles.summaryValue}>
-                ₱{budget.budget_left}
-              </Text>
-            </View>
-            <View style={styles.summaryCardWarning}>
-              <Text style={styles.summaryLabelWarning}>Over budget</Text>
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryCardNeutral}>
+            <Text style={styles.summaryLabelMuted}>Budget left</Text>
+            {budget?.monthly_budget != null ? (
+              <Text style={styles.summaryValue}>₱{budget.budget_left}</Text>
+            ) : (
+              <Text style={styles.summaryPrompt}>Set budget in Settings</Text>
+            )}
+          </View>
+          <View style={styles.summaryCardWarning}>
+            <Text style={styles.summaryLabelWarning}>Over budget</Text>
+            {budget?.categories?.some((c) => c.category_budget !== null) ? (
               <Text style={styles.summaryValueWarning}>
                 {budget.over_budget_categories.length > 0
                   ? budget.over_budget_categories.length === 1
@@ -374,9 +376,11 @@ export default function HomeScreen() {
                     : `${budget.over_budget_categories[0]} +${budget.over_budget_categories.length - 1} more`
                   : 'None'}
               </Text>
-            </View>
+            ) : (
+              <Text style={styles.summaryPrompt}>Set values in Settings</Text>
+            )}
           </View>
-        )}
+        </View>
 
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Recent Expense</Text>
@@ -941,4 +945,5 @@ const styles = StyleSheet.create({
     padding: 12,
     justifyContent: 'center',
   },
+  summaryPrompt: { fontSize: 13, color: COLORS.muted, marginTop: 4, fontStyle: 'italic' },
 });

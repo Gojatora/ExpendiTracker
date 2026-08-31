@@ -301,7 +301,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <View style={styles.tabRow}>
         {(['region', 'budget', 'notifications'] as SettingsTab[]).map((tab) => (
           <Pressable
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { padding: 16 },
 
-  tabRow: { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 0 },
+  tabRow: { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 15, elevation: 2, backgroundColor: COLORS.white },
   tabButton: {
     flex: 1,
     paddingVertical: 10,
