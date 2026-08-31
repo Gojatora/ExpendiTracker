@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy.orm import Session
 from pwdlib import PasswordHash
 
@@ -66,4 +68,11 @@ class AuthService:
         self.db.commit()
         self.db.refresh(user)
 
+        return user
+
+    def set_monthly_income(self, user_id: int, amount: Decimal) -> User:
+        user = self.db.query(User).filter(User.user_id == user_id).first()
+        user.monthly_income = amount
+        self.db.commit()
+        self.db.refresh(user)
         return user

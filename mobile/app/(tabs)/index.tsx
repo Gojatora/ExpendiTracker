@@ -475,7 +475,7 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.benchmarkGrid}>
+            <ScrollView contentContainerStyle={styles.benchmarkGrid}>
               {totalSpendingTab === 'region'
                 ? categories.map((item) => (
                     <View key={item.category_id} style={styles.benchmarkCell}>

@@ -26,3 +26,8 @@ export async function getMe() {
   const response = await apiClient.get('/auth/me');
   return response.data;
 }
+
+export async function setIncome(amount) {
+  const response = await apiClient.put('/auth/me/income', { amount });
+  return response.data;
+}

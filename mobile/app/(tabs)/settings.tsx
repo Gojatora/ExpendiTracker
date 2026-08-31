@@ -19,7 +19,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 
 import { useAuth } from '@/context/AuthContext';
-import { getMe, updateRegion } from '@/api/auth';
+import { getMe, setIncome, updateRegion } from '@/api/auth';
 import { getRegions } from '@/api/regions';
 import { getCategories } from '@/api/categories';
 import { setMonthlyBudget, setCategoryBudget, getBudgetSummary } from '@/api/budget';
@@ -67,6 +67,9 @@ export default function SettingsScreen() {
   const [savingAllCategoryBudgets, setSavingAllCategoryBudgets] = useState(false);
   const [autofilling, setAutofilling] = useState(false);
 
+  const [monthlyIncomeInput, setMonthlyIncomeInput] = useState('');
+  const [savingIncome, setSavingIncome] = useState(false);
+
   const loadSettingsData = useCallback(async () => {
     try {
       const [regionsData, meData, categoriesData, budgetSummary] = await Promise.all([
@@ -82,6 +85,8 @@ export default function SettingsScreen() {
       setMonthlyBudgetInput(
         budgetSummary.monthly_budget !== null ? String(budgetSummary.monthly_budget) : ''
       );
+
+      setMonthlyIncomeInput(meData.monthly_income !== null ? String(meData.monthly_income) : '');
 
       const prefill: Record<number, string> = {};
       for (const cat of budgetSummary.categories) {
@@ -259,6 +264,27 @@ export default function SettingsScreen() {
     }
   };
 
+    const handleSaveIncome = async () => {
+    const parsed = parseFloat(monthlyIncomeInput);
+    if (isNaN(parsed) || parsed < 0) {
+      Alert.alert('Invalid amount', 'Please enter a valid income amount.');
+      return;
+    }
+  setSavingIncome(true);
+    try {
+      await setIncome(parsed.toFixed(2));
+      Alert.alert('Saved', 'Monthly income updated.');
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        Alert.alert('Error', err.response?.data?.detail ?? 'Failed to save income.');
+      } else {
+        Alert.alert('Error', 'Something went wrong.');
+      }
+    } finally {
+      setSavingIncome(false);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert('Log out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -325,6 +351,26 @@ export default function SettingsScreen() {
 
         {activeTab === 'budget' && (
           <>
+            <View style={styles.card}>
+              <Text style={styles.label}>Monthly Income</Text>
+              <Text style={styles.hint}>Used to calculate your savings rate on the Dashboard.</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={monthlyIncomeInput}
+                  onChangeText={setMonthlyIncomeInput}
+                  placeholder="e.g. 25000.00"
+                  keyboardType="decimal-pad"
+                />
+                <Pressable
+                  style={[styles.saveButton, { paddingHorizontal: 16, marginTop: 0 }, savingIncome && styles.buttonDisabled]}
+                  onPress={handleSaveIncome}
+                  disabled={savingIncome}
+                >
+                  <Text style={styles.saveButtonText}>{savingIncome ? '...' : 'Save'}</Text>
+                </Pressable>
+              </View>
+            </View>
             <View style={styles.card}>
               <Text style={styles.label}>Monthly Budget</Text>
               <Text style={styles.hint}>Your overall spending target for the month.</Text>

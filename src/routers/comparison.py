@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from src.db.session import get_db
 from src.dependencies import get_current_user
 from src.models.models import User
-from src.schemas.comparison import ComparisonResponse, MonthOverMonthResponse
+from src.schemas.comparison import ComparisonResponse, MonthOverMonthResponse, YearlyTrendItem
 from src.services.comparison_service import ComparisonService, RegionNotFoundError
 
 router = APIRouter(prefix="/comparison", tags=["comparison"])
@@ -41,3 +41,11 @@ def get_month_over_month_comparison(
     service = ComparisonService(db)
     result = service.get_month_over_month(current_user.user_id)
     return MonthOverMonthResponse(**result)
+
+@router.get("/yearly-trend", response_model=list[YearlyTrendItem])
+def get_yearly_trend(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = ComparisonService(db)
+    return service.get_yearly_trend(current_user.user_id)

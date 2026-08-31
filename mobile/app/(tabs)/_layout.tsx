@@ -43,9 +43,9 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="comparison"
+        name="dashboard"
         options={{
-          title: 'Comparison',
+          title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="bar-chart-outline" size={size} color={color} />
           ),
