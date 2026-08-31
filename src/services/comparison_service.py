@@ -209,3 +209,34 @@ class ComparisonService:
             .all()
         )
         return {row.category_id: row.total_spent for row in rows}
+
+    def get_yearly_trend(self, user_id: int) -> list[dict]:
+        today = date.today()
+        month_starts = []
+        year, month = today.year, today.month
+        for _ in range(12):
+            month_starts.append(date(year, month, 1))
+            month -= 1
+            if month == 0:
+                month, year = 12, year - 1
+        month_starts.reverse()  # oldest first
+
+        range_start = month_starts[0]
+        rows = (
+            self.db.query(
+                func.to_char(Expense.expense_date, 'YYYY-MM').label('month_key'),
+                func.sum(Expense.amount).label('total'),
+            )
+            .filter(Expense.user_id == user_id, Expense.expense_date >= range_start)
+            .group_by('month_key')
+            .all()
+        )
+        totals_by_month = {row.month_key: row.total for row in rows}
+
+        return [
+            {
+                "month": ms.strftime("%Y-%m"),
+                "total": totals_by_month.get(ms.strftime("%Y-%m"), Decimal('0')),
+            }
+            for ms in month_starts
+        ]

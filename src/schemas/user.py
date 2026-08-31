@@ -36,3 +36,6 @@ class TokenResponse(BaseModel):
 
 class UpdateRegionRequest(BaseModel):
     region_id: Optional[int] = None
+
+class SetMonthlyIncomeRequest(BaseModel):
+    amount: Decimal

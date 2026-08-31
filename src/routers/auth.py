@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from src.db.session import get_db
-from src.schemas.user import UserCreate, UserOut, UserLogin, TokenResponse, UpdateRegionRequest
+from src.schemas.user import SetMonthlyIncomeRequest, UserCreate, UserOut, UserLogin, TokenResponse, UpdateRegionRequest
 from src.services.auth_service import (
     AuthService,
     EmailAlreadyRegisteredError,
@@ -59,3 +59,12 @@ def update_region(
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+@router.put("/me/income", response_model=UserOut)
+def set_income(
+    request: SetMonthlyIncomeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = AuthService(db)
+    return service.set_monthly_income(current_user.user_id, request.amount)

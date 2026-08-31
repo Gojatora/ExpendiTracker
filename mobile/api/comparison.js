@@ -10,3 +10,8 @@ export async function getMonthOverMonth() {
   const response = await apiClient.get('/comparison/month-over-month');
   return response.data;
 }
+
+export async function getYearlyTrend() {
+  const response = await apiClient.get('/comparison/yearly-trend');
+  return response.data;
+}

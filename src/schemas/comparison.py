@@ -29,3 +29,7 @@ class MonthOverMonthResponse(BaseModel):
     current_month: str
     previous_month: str
     categories: list[MonthCategoryComparison]
+
+class YearlyTrendItem(BaseModel):
+    month: str
+    total: Decimal
