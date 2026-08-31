@@ -507,7 +507,7 @@ export default function HomeScreen() {
                           {' | '}
                           {item.category_budget !== null ? `₱${item.category_budget}` : 'No budget set'}
                         </Text>
-                        {item.category_budget !== null && (
+                        {item.category_budget !== null && parseFloat(item.amount_spent) > 0 && (
                           <Text style={item.over_budget ? styles.badgeAbove : styles.badgeBelow}>
                             {item.over_budget ? '↑ Above' : '↓ Below'}
                           </Text>
