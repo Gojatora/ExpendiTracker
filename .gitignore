@@ -13,3 +13,5 @@ data/raw/
 __pycache__/
 *.pyc
 main
+
+.env.docker
