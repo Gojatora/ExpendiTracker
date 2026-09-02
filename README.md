@@ -134,6 +134,7 @@ The backend is **containerized and verified working**: `docker build` completes 
 - Notification delivery timing is subject to Android OS-level battery optimization (particularly MIUI devices) — scheduling logic is confirmed correct, but exact delivery time can vary by a few minutes
 - Comparison chart's "% of Benchmark" and "vs. Previous Month" visuals hit a `victory-native` library bug around ordinal-axis label rendering on bar charts; "vs. Previous Month" was rebuilt with plain React Native views to work around it
 - Savings Rate KPI requires the user to set their monthly income in Settings; shows a prompt rather than a number until they do
+- The packaged Android build (EAS) uses plain HTTP (`usesCleartextTraffic: true`) to reach the backend over the local network for demo/testing purposes. This is appropriate for the local Wi-Fi setup used throughout development and for the defense, but is not suitable for a real production release — a deployed backend should use HTTPS, and cleartext traffic should be disabled before any public distribution
 
 ## Sprint tracking
 
