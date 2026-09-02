@@ -111,10 +111,17 @@ Tests run against an isolated `expenditracker_test` database, configured via `TE
  
 ## Screenshots
  
-<!-- Add screenshots or a demo GIF here before submission. Suggested: Login,
-     Home (with budget cards), Add Expense (batch entry), Dashboard (KPIs +
-     charts), Settings. -->
- 
+<img src="docs/Screenshots/screenshot_1.jpg" alt="Home Tab">
+<img src="docs/Screenshots/screenshot_2.jpg" alt="Total Spending Popup Vs benchmark">
+<img src="docs/Screenshots/screenshot_3.jpg" alt="Total Spending Popup Vs custom">
+<img src="docs/Screenshots/screenshot_4.jpg" alt="Spending History Popup">
+<img src="docs/Screenshots/screenshot_5.jpg" alt="Expense detail popup">
+<img src="docs/Screenshots/screenshot_6.jpg" alt="Add Expense Tab">
+<img src="docs/Screenshots/screenshot_7.jpg" alt="Dashboard Tab">
+<img src="docs/Screenshots/screenshot_8.jpg" alt="Dashboard Tab">
+<img src="docs/Screenshots/screenshot_9.jpg" alt="Settings Tab"> 
+<img src="docs/Screenshots/screenshot_10.jpg" alt="Settings Tab">
+<img src="docs/Screenshots/screenshot_11.jpg" alt="Settings Tab">
 ## User stories → shipped features
  
 | Priority | User story | Status | Sprint |
