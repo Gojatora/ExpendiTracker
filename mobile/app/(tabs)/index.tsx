@@ -328,6 +328,13 @@ export default function HomeScreen() {
       },
     ]);
   };
+  
+  const todayTotal = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    return allExpenses
+      .filter((e) => e.expense_date === todayStr)
+      .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+  }, [allExpenses]);
 
   if (loading) {
     return (
@@ -355,6 +362,7 @@ export default function HomeScreen() {
           <Text style={styles.totalAmount}>
             ₱{budget?.total_spent ?? '0.00'}
           </Text>
+          <Text style={styles.todayText}>Today: ₱{todayTotal.toFixed(2)}</Text>
         </TouchableOpacity>
 
         <View style={styles.summaryRow}>
@@ -946,4 +954,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   summaryPrompt: { fontSize: 13, color: COLORS.muted, marginTop: 4, fontStyle: 'italic' },
+  todayText: { fontSize: 13, color: COLORS.muted, marginTop: 4 },
 });
