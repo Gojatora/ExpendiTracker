@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { StyleSheet, Text, View, ActivityIndicator, ScrollView, RefreshControl, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CartesianChart, Bar, Line } from 'victory-native';
+import { CartesianChart, Line } from 'victory-native';
 import { matchFont } from '@shopify/react-native-skia';
 import axios from 'axios';
 
@@ -317,34 +317,50 @@ export default function DashboardScreen() {
                 No comparable data yet. Log some expenses this month to see
                 your spending charted against regional benchmarks.
               </Text>
-            ) : (
-              <View style={styles.chartWrapper}>
-                <CartesianChart
-                  data={chartData}
-                  xKey="category"
-                  yKeys={['overValue', 'underValue']}
-                  domainPadding={{ left: 30, right: 30, top: 30 }}
-                  axisOptions={{ font: axisFont, formatYLabel: (v) => `${v}%`, tickCount: monthData?.categories.filter((c) => c.percent_change !== null).length }}
-                >
-                  {({ points, chartBounds }) => (
-                    <>
-                      <Bar
-                        points={points.overValue}
-                        chartBounds={chartBounds}
-                        color={COLORS.red}
-                        roundedCorners={{ topLeft: 4, topRight: 4 }}
-                      />
-                      <Bar
-                        points={points.underValue}
-                        chartBounds={chartBounds}
-                        color={COLORS.greenGood}
-                        roundedCorners={{ topLeft: 4, topRight: 4 }}
-                      />
-                    </>
-                  )}
-                </CartesianChart>
-              </View>
-            )}
+            ) : (() => {
+              const percentData = chartableCategories.map((c) => {
+                const spent = parseFloat(c.user_spent!);
+                const benchmark = parseFloat(c.benchmark_avg!);
+                const percent = benchmark > 0 ? (spent / benchmark) * 100 : 0;
+                return { name: c.category_name, percent };
+              });
+              const maxPercent = Math.max(...percentData.map((d) => d.percent), 100);
+
+              return (
+                <View style={styles.divergingChartWrapper}>
+                  {percentData.map((d) => {
+                    const isOver = d.percent > 100;
+                    const barWidthPercent = Math.min((d.percent / maxPercent) * 100, 100);
+                    return (
+                      <View key={d.name} style={styles.divergingRow}>
+                        <Text style={styles.divergingLabel} numberOfLines={1}>
+                          {d.name}
+                        </Text>
+                        <View style={styles.percentTrack}>
+                          <View
+                            style={[
+                              styles.percentBar,
+                              {
+                                width: `${barWidthPercent}%`,
+                                backgroundColor: isOver ? COLORS.red : COLORS.greenGood,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Text
+                          style={[
+                            styles.divergingPercent,
+                            { color: isOver ? COLORS.red : COLORS.greenGood },
+                          ]}
+                        >
+                          {d.percent.toFixed(0)}%
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })()}
 
             {categories.some((c) => c.user_spent === null || c.benchmark_avg === null) && (
               <Text style={styles.noteText}>
@@ -535,4 +551,12 @@ const styles = StyleSheet.create({
   },
   divergingBar: { position: 'absolute', top: 0, bottom: 0, borderRadius: 2 },
   divergingPercent: { width: 55, fontSize: 12, fontWeight: '700', textAlign: 'right' },
+  percentTrack: {
+    flex: 1,
+    height: 18,
+    backgroundColor: '#eee',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  percentBar: { height: '100%', borderRadius: 2 },
 });
